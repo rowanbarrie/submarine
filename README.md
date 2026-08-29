@@ -50,6 +50,23 @@
 2. **Weapons Charge / Reload Calibration:** Integrate timed slider games or sequence button matching tasks before Torpedo Officers can engage the firing mechanisms.
 3. **Engineering Resource Routing:** Active control valves for engineers to run hull welding checks or dump engine heat signatures to initiate silent stealth runs.
 
+## 🚀 Production Deployment via PM2
+
+To ensure the game server runs continuously in the background on your DigitalOcean Droplet and automatically restarts after crashes or reboots, deploy it using PM2:
+
+```bash
+# Install PM2 globally
+sudo npm install -g pm2
+
+# Launch your server file and assign it a name
+pm2 start server.js --name "submarine"
+
+# Ensure PM2 boots up your game automatically if the Droplet reboots
+pm2 startup
+pm2 save
+```
+
+
 ## 📦 Codebase Packing with Repomix
 
 This project uses [Repomix](https://github.com) to pack the codebase into a single file for AI code reviews and analysis.
