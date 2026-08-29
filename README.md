@@ -49,3 +49,16 @@
 1. **Sonar Visual Graph Map:** Give Sonar technicians a clear map grid layout where clicking sectors drops visual tracking pins to trace suspected paths manually based on distance logs.
 2. **Weapons Charge / Reload Calibration:** Integrate timed slider games or sequence button matching tasks before Torpedo Officers can engage the firing mechanisms.
 3. **Engineering Resource Routing:** Active control valves for engineers to run hull welding checks or dump engine heat signatures to initiate silent stealth runs.
+
+## 📦 Codebase Packing with Repomix
+
+This project uses [Repomix](https://github.com) to pack the codebase into a single file for AI code reviews and analysis.
+
+To generate a new packed repository file, run:
+
+```bash
+npx repomix
+```
+
+*Excluded by default via `.gitignore`: `node_modules/`, `npm-debug.log`, and `repomix-output.xml`.*
+
