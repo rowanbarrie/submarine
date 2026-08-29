@@ -83,6 +83,21 @@ io.on('connection', (socket) => {
             io.emit('game_over', { winner: team });
         }
     });
+
+    // ADMIN/PLAYER: Reset Game State back to defaults
+    socket.on('reset_game', () => {
+        gameState = {
+            active: true,
+            teams: {
+                Alpha: { pos: { x: 2, y: 2 }, hp: 100, target: { x: 4, y: 4 } },
+                Bravo: { pos: { x: 7, y: 7 }, hp: 100, target: { x: 4, y: 4 } }
+            }
+        };
+
+        // Notify all clients across both teams to instantly reload their screens
+        io.emit('game_over', { winner: 'SYSTEM RESET' });
+    });
+
 });
 
 const PORT = process.env.PORT || 3000;

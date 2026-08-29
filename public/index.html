@@ -158,6 +158,7 @@
                 <h2 id="display-role" style="margin:0; text-align: left; color: white;">Role</h2>
             </div>
             <div style="text-align: right;">
+                <button onclick="triggerReset()" style="padding: 4px 8px; font-size: 11px; width: auto; background: #374151; border: 1px solid #ef4444; color: #ef4444; font-weight: bold; margin: 0 0 5px 0; cursor: pointer; border-radius: 4px;">🔄 RESET GAME</button>
                 <div style="font-size: 10px; color: #9ca3af;">HULL INTEGRITY:</div>
                 <div id="display-hp" style="font-size: 20px; font-weight: bold; color: #ef4444;">100%</div>
             </div>
@@ -323,6 +324,12 @@
             socket.emit('fire_torpedo');
         }
 
+        function triggerReset() {
+            if (confirm("Are you sure you want to abort the mission and reset the game state for everyone?")) {
+                socket.emit('reset_game');
+            }
+        }
+
         function generateCaptainGrid() {
             const gridContainer = document.getElementById('captain-map-grid');
             if (!gridContainer) return;
@@ -399,9 +406,14 @@
         });
 
         socket.on('game_over', (data) => {
-            alert(`GAME OVER! Team ${data.winner} has sunk the enemy submarine and rules the depth!`);
+            if (data.winner === 'SYSTEM RESET') {
+                alert("🚨 MISSION ABORTED: The game engine has been reset by Command. Returning to battle stations setup...");
+            } else {
+                alert(`💥 GAME OVER! Team ${data.winner} has sunk the enemy submarine and rules the depths!`);
+            }
             location.reload();
         });
+
     </script>
 </body>
 </html>
