@@ -23,115 +23,35 @@
         .logs { background: black; border: 1px solid #39ff14; padding: 10px; height: 200px; border-radius: 4px; overflow-y: auto; font-size: 12px; margin-bottom: 15px; }
         .warn { color: #f59e0b; margin-bottom: 4px; }
 
-        /* 8x8 Sonar Visual Map Matrix Layout */
-        .sonar-matrix {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 4px;
-            max-width: 360px;
-            margin: 15px auto;
-            background: #111827;
-            padding: 8px;
-            border: 1px solid #10b981;
-            border-radius: 6px;
-        }
-        .sonar-tile {
-            aspect-ratio: 1;
-            background: #1f293d;
-            border: 1px solid #374151;
-            color: #4b5563;
-            font-size: 10px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            border-radius: 2px;
-            transition: all 0.2s ease;
-        }
-        .sonar-tile:hover {
-            border-color: #10b981;
-        }
-        /* Active Cycling State Colors */
-        .sonar-tile.state-possible {
-            background: rgba(5, 150, 105, 0.3);
-            border-color: #39ff14;
-            color: #39ff14;
-            box-shadow: inset 0 0 8px rgba(57,255,20,0.4);
-        }
-        .sonar-tile.state-splash {
-            background: rgba(220, 38, 38, 0.3);
-            border-color: #ef4444;
-            color: #ef4444;
-            box-shadow: inset 0 0 8px rgba(239,68,68,0.4);
-        }
+        .power-grid { display: flex; flex-direction: column; gap: 15px; margin: 20px auto; max-width: 360px; }
+        .power-row { background: #111827; border: 1px solid #4b5563; border-radius: 6px; padding: 12px; display: flex; align-items: center; justify-content: space-between; }
+        .power-meta { flex: 1; text-align: left; }
+        .power-title { font-weight: bold; color: white; font-size: 14px; margin-bottom: 2px; }
+        .power-status { font-size: 11px; color: #9ca3af; }
+        .power-controls { display: flex; align-items: center; gap: 10px; }
+        .power-btn { width: 35px; height: 35px; padding: 0; margin: 0; background: #1f293d; border: 1px solid #39ff14; color: #39ff14; font-size: 20px; font-weight: bold; cursor: pointer; border-radius: 4px; }
+        .power-btn:hover { background: rgba(57,255,20,0.1); }
+        .power-val { font-size: 22px; font-weight: bold; width: 20px; text-align: center; color: white; }
+        .sys-alert-banner { background: rgba(220, 38, 38, 0.2); border: 1px solid #ef4444; color: #ef4444; border-radius: 4px; padding: 8px; text-align: center; font-size: 11px; margin-bottom: 10px; font-weight: bold; }
 
-        /* Dynamic Sonar Radar Ring Highlight */
-        .sonar-tile.ring-highlight {
-            border-color: #f59e0b;
-            color: #f59e0b;
-            background: rgba(245, 158, 11, 0.15);
-            animation: radarPulse 1.5s infinite alternate;
-        }
-        @keyframes radarPulse {
-            from { box-shadow: inset 0 0 4px rgba(245,158,11,0.2); }
-            to { box-shadow: inset 0 0 12px rgba(245,158,11,0.5); }
-        }
+        .sonar-matrix { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; max-width: 360px; margin: 15px auto; background: #111827; padding: 8px; border: 1px solid #10b981; border-radius: 6px; }
+        .sonar-tile { aspect-ratio: 1; background: #1f293d; border: 1px solid #374151; color: #4b5563; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 2px; transition: all 0.2s ease; }
+        .sonar-tile:hover { border-color: #10b981; }
+        .sonar-tile.state-possible { background: rgba(5, 150, 105, 0.3); border-color: #39ff14; color: #39ff14; box-shadow: inset 0 0 8px rgba(57,255,20,0.4); }
+        .sonar-tile.state-splash { background: rgba(220, 38, 38, 0.3); border-color: #ef4444; color: #ef4444; box-shadow: inset 0 0 8px rgba(239,68,68,0.4); }
+        .sonar-tile.ring-highlight { border-color: #f59e0b; color: #f59e0b; background: rgba(245, 158, 11, 0.15); animation: radarPulse 1.5s infinite alternate; }
+        @keyframes radarPulse { from { box-shadow: inset 0 0 4px rgba(245,158,11,0.2); } to { box-shadow: inset 0 0 12px rgba(245,158,11,0.5); } }
 
-        /* Captain's Navigation Map Grid Matrix */
-        .helm-matrix {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 4px;
-            max-width: 360px;
-            margin: 15px auto;
-            background: #111827;
-            padding: 8px;
-            border: 1px solid #f59e0b;
-            border-radius: 6px;
-        }
-        .helm-tile {
-            aspect-ratio: 1;
-            background: #1f293d;
-            border: 1px solid #374151;
-            color: #4b5563;
-            font-size: 10px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            border-radius: 2px;
-            transition: all 0.2s ease;
-        }
-        .helm-tile:hover {
-            border-color: #f59e0b;
-        }
-        /* Submarine Position Indicator Overlay */
-        .helm-tile.sub-here {
-            background: rgba(59, 130, 246, 0.4);
-            border-color: #3b82f6;
-            color: #ffffff;
-            box-shadow: 0 0 10px #3b82f6;
-        }
-        /* Weapons Target Lock Crosshair Overlay */
-        .helm-tile.target-locked {
-            background: rgba(220, 38, 38, 0.4);
-            border-color: #ef4444;
-            color: #ffffff;
-            box-shadow: 0 0 10px #ef4444;
-        }
-        /* Intersection State (Sub is targeting its own sector) */
-        .helm-tile.sub-here.target-locked {
-            background: linear-gradient(45deg, #3b82f6, #ef4444);
-            border-color: #f59e0b;
-        }
-
+        .helm-matrix { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; max-width: 360px; margin: 15px auto; background: #111827; padding: 8px; border: 1px solid #f59e0b; border-radius: 6px; }
+        .helm-tile { aspect-ratio: 1; background: #1f293d; border: 1px solid #374151; color: #4b5563; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 2px; transition: all 0.2s ease; }
+        .helm-tile:hover { border-color: #f59e0b; }
+        .helm-tile.sub-here { background: rgba(59, 130, 246, 0.4); border-color: #3b82f6; color: #ffffff; box-shadow: 0 0 10px #3b82f6; }
+        .helm-tile.target-locked { background: rgba(220, 38, 38, 0.4); border-color: #ef4444; color: #ffffff; box-shadow: 0 0 10px #ef4444; }
+        .helm-tile.sub-here.target-locked { background: linear-gradient(45deg, #3b82f6, #ef4444); border-color: #f59e0b; }
     </style>
 </head>
 <body>
 
-    <!-- Setup Screen -->
     <div id="setup-screen" class="card">
         <h1>SILENT DEPTH</h1>
         <label>Select Team:</label>
@@ -139,7 +59,6 @@
             <option value="Alpha">Team Alpha (Red Room)</option>
             <option value="Bravo">Team Bravo (Blue Room)</option>
         </select>
-        
         <label>Select Station Role:</label>
         <select id="role-select">
             <option value="Captain">Captain (Helm & Orders)</option>
@@ -150,7 +69,6 @@
         <button onclick="joinGame()" class="action-btn">BATTLE STATIONS</button>
     </div>
 
-    <!-- Gameplay Screen -->
     <div id="game-screen" class="hidden" style="max-width: 400px; margin: 0 auto;">
         <div class="header">
             <div>
@@ -164,83 +82,72 @@
             </div>
         </div>
 
-        <!-- Captain Panel with Integrated Multi-Station Overrides -->
         <div id="panel-Captain" class="hidden">
+            <div id="captain-power-alert" class="sys-alert-banner hidden">⚠️ ENGINE POWER CRITICAL: STEERING LOCKOUT</div>
             <p style="text-align: center; color: #f59e0b; margin-bottom: 5px;">NAV-CON HELM & TACTICAL MAP</p>
-            
-            <!-- Dynamic 8x8 Grid Interface Viewport -->
             <div class="helm-matrix" id="captain-map-grid"></div>
-            
-            <p style="text-align: center; color: #6b7280; font-size: 11px; margin: 0 0 15px 0;">
-                🔵 Blue = Your Location | 🎯 Tap any tile to update Weapons Lock
-            </p>
-
-            <!-- Navigation Controls -->
+            <p style="text-align: center; color: #6b7280; font-size: 11px; margin: 0 0 15px 0;">🔵 Blue = Your Location | 🎯 Tap any tile to update Weapons Lock</p>
             <div class="grid" style="margin-bottom: 20px;">
                 <div></div><button onclick="move('N')">▲ N</button><div></div>
                 <button onclick="move('W')">◀ W</button><div class="coords" id="coords">X:2 Y:2</div><button onclick="move('E')">E ▶</button>
                 <div></div><button onclick="move('S')">▼ S</button><div></div>
             </div>
-
-            <hr style="border-color: #1f293d; margin: 15px 0;">
-
-	    <!-- SOLO/MULTIPLAYER INTEGRATED COMBAT DRIVES -->
             <div id="bridge-fire-control" class="hidden">
                 <hr style="border-color: #1f293d; margin: 15px 0;">
                 <p style="text-align: center; color: #dc2626; margin-bottom: 10px; font-size: 14px;">INTEGRATED FIRE CONTROL</p>
                 <button onclick="fireTorpedo()" class="fire-btn" style="margin-bottom: 20px;">💥 LAUNCH TORPEDO STRIKE</button>
             </div>
-
             <div id="bridge-sonar-feed">
                 <p style="text-align: center; color: #39ff14; margin-bottom: 5px; font-size: 14px;">HELM SONAR REPEATER FEED</p>
                 <div class="logs" id="captain-sonar-logs" style="height: 100px;">
                     <div style="color: #6b7280;">[HYDROPHONE BRIDGE REPEATER ONLINE]</div>
                 </div>
             </div>
-
         </div>
 
-        <!-- Sonar Panel with Visual Chart Overlay -->
         <div id="panel-Sonar" class="hidden">
             <p style="text-align: center; color: #39ff14; margin-bottom: 5px;">PASSIVE SONAR RADAR FEED</p>
-            
-            <!-- Dynamic 8x8 Grid Chart Workbook -->
             <div class="sonar-matrix" id="sonar-chart-grid"></div>
-            
-            <p style="text-align: center; color: #6b7280; font-size: 11px; margin: 0 0 10px 0;">
-                💡 Tap cells to cycle flags: Clear ➡️ 🟩 Possible ➡️ 🟥 Splashdown
-            </p>
-
-            <div class="logs" id="sonar-logs">
-                <div style="color: #6b7280;">[HYDROPHONES ONLINE]</div>
-            </div>
+            <p style="text-align: center; color: #6b7280; font-size: 11px; margin: 0 0 10px 0;">💡 Tap cells to cycle flags: Clear ➡️ 🟩 Possible ➡️ 🟥 Splashdown</p>
+            <div class="logs" id="sonar-logs"><div style="color: #6b7280;">[HYDROPHONES ONLINE]</div></div>
         </div>
 
-        <!-- Weapons Panel -->
         <div id="panel-Weapons" class="hidden">
+            <div id="weapons-power-alert" class="sys-alert-banner hidden">⚠️ TORPEDO RECHARGER STARVED: LAUNCH INTERLOCK ACTIVE</div>
             <p style="text-align: center; color: #dc2626; margin-bottom: 15px;">TORPEDO BAY MANAGEMENT</p>
-            <div style="background: #161e2e; border: 1px solid #4b5563; padding: 15px; border-radius: 4px; margin-bottom: 15px; text-center: center;">
+            <div style="background: #161e2e; border: 1px solid #4b5563; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
                 <span style="font-size: 12px; color: #9ca3af;">BRIDGE TARGET ACQUISITION:</span>
                 <div id="weapons-target-display" style="font-size: 24px; font-weight: bold; color: #f59e0b; text-align: center; margin: 10px 0;">X: 1 | Y: 1</div>
             </div>
             <button onclick="fireTorpedo()" class="fire-btn">💥 MATCH PAYLOAD & FIRE</button>
         </div>
 
-        <!-- Engineer Panel -->
-        <div id="panel-Engineer" class="hidden" style="text-align: center; color: #9ca3af; font-style: italic; margin-top: 40px;">
-            System monitors operational. Listen closely to room chatter to prepare hull repair tasks.
-        </div>
-
-        <!-- Generic Safe Fallback Panel -->
-        <div id="panel-Generic" class="hidden" style="text-align: center; color: #ef4444; margin-top: 40px;">
-            ⚠️ Command Interface Error. Role panel configuration missing.
+        <div id="panel-Engineer" class="hidden">
+            <p style="text-align: center; color: #a855f7; margin-bottom: 5px; font-weight: bold;">REACTOR AUXILIARY POWER MANAGEMENT</p>
+            <div style="text-align: center; font-size: 12px; color: #9ca3af; margin-bottom: 15px;">
+                Total Cells Allocated: <span id="power-pool-display" style="color: #a855f7; font-weight: bold;">6 / 6</span>
+            </div>
+            <div class="power-grid">
+                <div class="power-row">
+                    <div class="power-meta"><div class="power-title">⚙️ Propulsion Engines</div><div class="power-status" id="engine-subtext">Needs ≥ 2 units to steer</div></div>
+                    <div class="power-controls"><button class="power-btn" onclick="adjustPower('engines', -1)">-</button><div class="power-val" id="val-engines">2</div><button class="power-btn" onclick="adjustPower('engines', 1)">+</button></div>
+                </div>
+                <div class="power-row">
+                    <div class="power-meta"><div class="power-title">💥 Torpedo Capacitors</div><div class="power-status" id="weapons-subtext">Needs ≥ 2 units to fire</div></div>
+                    <div class="power-controls"><button class="power-btn" onclick="adjustPower('weapons', -1)">-</button><div class="power-val" id="val-weapons">2</div><button class="power-btn" onclick="adjustPower('weapons', 1)">+</button></div>
+                </div>
+                <div class="power-row">
+                    <div class="power-meta"><div class="power-title">🛡️ Matrix Dispersion Shields</div><div class="power-status" id="shields-subtext">Reduces hit damage (-10/unit)</div></div>
+                    <div class="power-controls"><button class="power-btn" onclick="adjustPower('shields', -1)">-</button><div class="power-val" id="val-shields">2</div><button class="power-btn" onclick="adjustPower('shields', 1)">+</button></div>
+                </div>
+            </div>
         </div>
     </div>
 
-        <script>
+    <script>
         const socket = io({ transports: ['websocket'] });
         let currentRole = '';
-        let ownPos = { x: 2, y: 2 }; // Fallback defaults matching server initialization
+        let ownPos = { x: 2, y: 2 };
 
         function joinGame() {
             const team = document.getElementById('team-select').value;
@@ -252,21 +159,10 @@
             document.getElementById('display-role').innerText = `${team} - ${role}`;
 
             const specificPanel = document.getElementById(`panel-${role}`);
-            if (specificPanel) {
-                specificPanel.classList.remove('hidden');
-            } else {
-                document.getElementById('panel-Generic').classList.remove('hidden');
-            }
+            if (specificPanel) specificPanel.classList.remove('hidden');
 
-            // DYNAMICALLY GENERATE SONAR GRID WORKBOOK
-            if (role === 'Sonar') {
-                generateSonarGrid();
-            }
-
-            // DYNAMICALLY GENERATE CAPTAIN TACTICAL HELM
-            if (role === 'Captain') {
-                generateCaptainGrid();
-            }
+            if (role === 'Sonar') generateSonarGrid();
+            if (role === 'Captain') generateCaptainGrid();
 
             socket.emit('join_game', { team, role });
         }
@@ -275,15 +171,12 @@
             const gridContainer = document.getElementById('sonar-chart-grid');
             if (!gridContainer) return;
             gridContainer.innerHTML = '';
-
             for (let y = 1; y <= 8; y++) {
                 for (let x = 1; x <= 8; x++) {
                     const tile = document.createElement('div');
                     tile.className = 'sonar-tile';
-                    tile.id = `sonar-tile-${x}-${y}`; // ID hook for ring highlights
+                    tile.id = `sonar-tile-${x}-${y}`;
                     tile.innerText = `${x},${y}`;
-
-                    // Manual tracking markers cycling behavior
                     tile.addEventListener('click', () => {
                         if (!tile.classList.contains('state-possible') && !tile.classList.contains('state-splash')) {
                             tile.classList.add('state-possible');
@@ -294,77 +187,43 @@
                             tile.classList.remove('state-splash');
                         }
                     });
-
                     gridContainer.appendChild(tile);
                 }
             }
         }
 
-        // Helper function to calculate Manhattan Distance client-side
         function clientCalculateDistance(p1, p2) {
             return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
         }
 
-        // Helper to sweep the grid and project the radar ring
         function highlightDistanceRing(targetDistance) {
-            // Clear all previous ring highlights first
-            document.querySelectorAll('.sonar-tile').forEach(tile => {
-                tile.classList.remove('ring-highlight');
-            });
-
-            // Highlight cells matching the target Manhattan distance from our own sub
+            document.querySelectorAll('.sonar-tile').forEach(tile => tile.classList.remove('ring-highlight'));
             for (let y = 1; y <= 8; y++) {
                 for (let x = 1; x <= 8; x++) {
-                    const distanceToTile = clientCalculateDistance(ownPos, { x, y });
-                    if (distanceToTile === targetDistance) {
+                    if (clientCalculateDistance(ownPos, { x, y }) === targetDistance) {
                         const tileElement = document.getElementById(`sonar-tile-${x}-${y}`);
-                        if (tileElement) {
-                            tileElement.classList.add('ring-highlight');
-                        }
+                        if (tileElement) tileElement.classList.add('ring-highlight');
                     }
                 }
             }
         }
 
-        function move(dir) {
-            socket.emit('move_sub', dir);
-        }
-
-        function lockTarget() {
-            const x = document.getElementById('target-x').value;
-            const y = document.getElementById('target-y').value;
-            if(x && y) {
-                socket.emit('set_target', { x, y });
-            }
-        }
-
-        function fireTorpedo() {
-            socket.emit('fire_torpedo');
-        }
-
-        function triggerReset() {
-            if (confirm("Are you sure you want to abort the mission and reset the game state for everyone?")) {
-                socket.emit('reset_game');
-            }
-        }
+        function move(dir) { socket.emit('move_sub', dir); }
+        function fireTorpedo() { socket.emit('fire_torpedo'); }
+        function adjustPower(system, change) { socket.emit('update_power', { system, change: parseInt(change, 10) }); }
+        function triggerReset() { if (confirm("Abort mission and reset game?")) socket.emit('reset_game'); }
 
         function generateCaptainGrid() {
             const gridContainer = document.getElementById('captain-map-grid');
             if (!gridContainer) return;
             gridContainer.innerHTML = '';
-
             for (let y = 1; y <= 8; y++) {
                 for (let x = 1; x <= 8; x++) {
                     const tile = document.createElement('div');
                     tile.className = 'helm-tile';
                     tile.id = `helm-tile-${x}-${y}`;
                     tile.innerText = `${x},${y}`;
-
-                    // Tapping sets weapons target coordinates system immediately
-                    tile.addEventListener('click', () => {
-                        socket.emit('set_target', { x, y });
-                    });
-
+                    tile.addEventListener('click', () => socket.emit('set_target', { x, y }));
                     gridContainer.appendChild(tile);
                 }
             }
@@ -373,59 +232,53 @@
         socket.on('state_update', (data) => {
             if(!data.active) return;
             document.getElementById('display-hp').innerText = `${data.teamState.hp}%`;
-            
-            if (data.teamState.pos) {
-                ownPos = data.teamState.pos;
+            if (data.teamState.pos) ownPos = data.teamState.pos;
+
+            if (data.teamState.power) {
+                const power = data.teamState.power;
+                const totalUsed = power.engines + power.weapons + power.shields;
+
+                if (currentRole === 'Engineer') {
+                    const poolText = document.getElementById('power-pool-display');
+                    if (totalUsed >= 6) {
+                        poolText.innerHTML = `${totalUsed} / 6 (MAX CAPACITY)`;
+                        poolText.style.color = "#ef4444";
+                    } else {
+                        poolText.innerHTML = `${totalUsed} / 6`;
+                        poolText.style.color = "#a855f7";
+                    }
+                    document.getElementById('val-engines').innerText = power.engines;
+                    document.getElementById('val-weapons').innerText = power.weapons;
+                    document.getElementById('val-shields').innerText = power.shields;
+                    document.getElementById('engine-subtext').innerHTML = power.engines < 2 ? "<span style='color:#ef4444; font-weight:bold;'>⚠️ ENGINE STALLED</span>" : "Propulsion functional";
+                    document.getElementById('weapons-subtext').innerHTML = power.weapons < 2 ? "<span style='color:#ef4444; font-weight:bold;'>⚠️ WEAPONS OFFLINE</span>" : "Capacitor charged";
+                    document.getElementById('shields-subtext').innerText = `Absorbs -${power.shields * 10} damage on hit`;
+                }
+
+                if (currentRole === 'Captain') {
+                    const alertBanner = document.getElementById('captain-power-alert');
+                    if (power.engines < 2) alertBanner.classList.remove('hidden');
+                    else alertBanner.classList.add('hidden');
+                }
+
+                if (currentRole === 'Weapons') {
+                    const alertBanner = document.getElementById('weapons-power-alert');
+                    if (power.weapons < 2) alertBanner.classList.remove('hidden');
+                    else alertBanner.classList.add('hidden');
+                }
             }
 
             if (currentRole === 'Captain') {
-                if (data.teamState.pos) {
-                    document.getElementById('coords').innerText = `X:${data.teamState.pos.x} Y:${data.teamState.pos.y}`;
-                }
-                
-                document.querySelectorAll('.helm-tile').forEach(tile => {
-                    tile.classList.remove('sub-here', 'target-locked');
-                });
-
+                if (data.teamState.pos) document.getElementById('coords').innerText = `X:${data.teamState.pos.x} Y:${data.teamState.pos.y}`;
+                document.querySelectorAll('.helm-tile').forEach(tile => tile.classList.remove('sub-here', 'target-locked'));
                 if (data.teamState.pos) {
                     const subTile = document.getElementById(`helm-tile-${data.teamState.pos.x}-${data.teamState.pos.y}`);
                     if (subTile) subTile.classList.add('sub-here');
                 }
-
                 if (data.teamState.target) {
                     const targetTile = document.getElementById(`helm-tile-${data.teamState.target.x}-${data.teamState.target.y}`);
                     if (targetTile) targetTile.classList.add('target-locked');
                 }
-
-                // DYNAMIC BALANCING: Check team roster to hide/show solo tools safely
-                if (data.teamState && data.teamState.roster) {
-                    const roster = data.teamState.roster;
-                    
-                    const fireControl = document.getElementById('bridge-fire-control');
-                    const sonarFeed = document.getElementById('bridge-sonar-feed');
-                    
-                    if (fireControl && sonarFeed) {
-                        // Solo/1v1 Fix: If nobody has picked Weapons, Captain MUST see the fire button
-                        if (roster.includes('Weapons')) {
-                            fireControl.classList.add('hidden');
-                        } else {
-                            fireControl.classList.remove('hidden');
-                        }
-
-                        // Solo/1v1 Fix: If nobody has picked Sonar, Captain MUST see the logs
-                        if (roster.includes('Sonar')) {
-                            sonarFeed.classList.add('hidden');
-                        } else {
-                            sonarFeed.classList.remove('hidden');
-                        }
-                    }
-                }
-
-            }
-
-            // Sonar station tracking synchronization hook
-            if (currentRole === 'Sonar' && data.teamState.pos) {
-                ownPos = data.teamState.pos;
             }
 
             if (currentRole === 'Weapons' && data.teamState.target) {
@@ -434,38 +287,21 @@
         });
 
         socket.on('sonar_ping', (data) => {
-            // ROUTE TO STANDARD SONAR PANEL
             const sonarLogs = document.getElementById('sonar-logs');
             if (currentRole === 'Sonar' && sonarLogs) {
                 sonarLogs.innerHTML += `<div class="warn">⚠️ ${data.message}</div>`;
-                sonarLogs.scrollTop = sonarLogs.scrollHeight; // Auto-scroll
-
-                // Run the automatic radar ring calculation mapping we built earlier
+                sonarLogs.scrollTop = sonarLogs.scrollHeight;
                 const distanceMatch = data.message.match(/Distance:\s*(\d+)/);
-                if (distanceMatch) {
-                    const parsedDistance = parseInt(distanceMatch[1], 10);
-                    highlightDistanceRing(parsedDistance);
-                }
+                if (distanceMatch) highlightDistanceRing(parseInt(distanceMatch, 10));
             }
-
-            // ROUTE TO CAPTAIN PANEL (BRIDGE REPEATER)
             const captainLogs = document.getElementById('captain-sonar-logs');
             if (currentRole === 'Captain' && captainLogs) {
                 captainLogs.innerHTML += `<div class="warn">⚠️ ${data.message}</div>`;
-                captainLogs.scrollTop = captainLogs.scrollHeight; // Auto-scroll
+                captainLogs.scrollTop = captainLogs.scrollHeight;
             }
         });
 
-        socket.on('game_over', (data) => {
-            if (data.winner === 'SYSTEM RESET') {
-                alert("🚨 MISSION ABORTED: The game engine has been reset by Command. Returning to battle stations setup...");
-            } else {
-                alert(`💥 GAME OVER! Team ${data.winner} has sunk the enemy submarine and rules the depths!`);
-            }
-            location.reload();
-        });
-
+        socket.on('game_over', (data) => { alert(data.winner === 'SYSTEM RESET' ? "🚨 RESET!" : `💥 Team ${data.winner} Wins!`); location.reload(); });
     </script>
 </body>
 </html>
-

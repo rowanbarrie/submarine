@@ -9,12 +9,22 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Global Game State
+// Global Game State with Engineering Power Subsystems
 let gameState = {
     active: true,
     teams: {
-        Alpha: { pos: { x: 2, y: 2 }, hp: 100, target: { x: 4, y: 4 } },
-        Bravo: { pos: { x: 7, y: 7 }, hp: 100, target: { x: 4, y: 4 } }
+        Alpha: { 
+            pos: { x: 2, y: 2 }, 
+            hp: 100, 
+            target: { x: 4, y: 4 },
+            power: { engines: 2, weapons: 2, shields: 2 }
+        },
+        Bravo: { 
+            pos: { x: 7, y: 7 }, 
+            hp: 100, 
+            target: { x: 4, y: 4 },
+            power: { engines: 2, weapons: 2, shields: 2 }
+        }
     }
 };
 
@@ -27,40 +37,59 @@ io.on('connection', (socket) => {
         socket.team = team;
         socket.role = role;
         socket.join(team);
-        socket.team = team;
-        socket.role = role;
 
-        // Initialize a roster array for the team if it doesn't exist
         if (!gameState.teams[team].roster) {
             gameState.teams[team].roster = [];
         }
-        // Add this role to the roster if it's not already there
         if (!gameState.teams[team].roster.includes(role)) {
             gameState.teams[team].roster.push(role);
         }
 
-        // Broadcast the update to the team room
         io.to(team).emit('state_update', { 
             teamState: gameState.teams[team], 
             active: gameState.active 
         });
     });
 
-    // CAPTAIN: Move Sub
+    // CHIEF ENGINEER: Update Power Distribution Grid Routing
+    socket.on('update_power', ({ system, change }) => {
+        if (!gameState.active || socket.role !== 'Engineer') return;
+        const team = socket.team;
+        const currentPower = gameState.teams[team].power;
+        
+        const delta = parseInt(change, 10);
+        const currentTotal = currentPower.engines + currentPower.weapons + currentPower.shields;
+        
+        // Block additions if pool is maxed out
+        if (delta === 1 && currentTotal >= 6) return; 
+        // Block reductions if track is empty
+        if (delta === -1 && currentPower[system] <= 0) return;
+        // Block additions if component track is overcharged
+        if (delta === 1 && currentPower[system] >= 4) return;
+
+        gameState.teams[team].power[system] += delta;
+
+        io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
+    });
+
+    // CAPTAIN: Move Sub (Enforces Engine Power Rules)
     socket.on('move_sub', (direction) => {
         if (!gameState.active || socket.role !== 'Captain') return;
         const team = socket.team;
-        let pos = gameState.teams[team].pos;
+        
+        if (gameState.teams[team].power.engines < 2) {
+            socket.emit('sonar_ping', { message: "🛑 HELM STALLED: Critical engine failure. Chief Engineer must allocate at least 2 Power Units to Engines!" });
+            return;
+        }
 
+        let pos = gameState.teams[team].pos;
         if (direction === 'N' && pos.y > 1) pos.y--;
         if (direction === 'S' && pos.y < 8) pos.y++;
         if (direction === 'E' && pos.x < 8) pos.x++;
         if (direction === 'W' && pos.x > 1) pos.x--;
 
-        // Pass the absolute team object containing positional math and roster structures
         io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
         
-        // SONAR MATH
         const enemyTeam = team === 'Alpha' ? 'Bravo' : 'Alpha';
         const dist = calculateDistance(gameState.teams[team].pos, gameState.teams[enemyTeam].pos);
         io.to(enemyTeam).emit('sonar_ping', { message: `Engine signatures detected. Distance: ${dist} sectors away.` });
@@ -74,7 +103,7 @@ io.on('connection', (socket) => {
         io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
     });
 
-    // WEAPONS / CAPTAIN OVERRIDE: Fire Torpedo
+    // WEAPONS: Fire Torpedo (Enforces Weapons Power & Shield Mitigation)
     socket.on('fire_torpedo', () => {
         if (!gameState.active) return;
         
@@ -82,18 +111,26 @@ io.on('connection', (socket) => {
         const role = socket.role;
         const roster = gameState.teams[team].roster || [];
 
-        // Allow if player is Weapons Officer, OR if they are Captain and no Weapons Officer is registered
         const isAuthorizedCaptain = (role === 'Captain' && !roster.includes('Weapons'));
         if (role !== 'Weapons' && !isAuthorizedCaptain) return;
         
+        if (gameState.teams[team].power.weapons < 2) {
+            socket.emit('sonar_ping', { message: "❌ FIRE CONTROL LOCKED: Insufficient capacitor energy. Weapons requires at least 2 Power Units!" });
+            return;
+        }
+
         const enemyTeam = team === 'Alpha' ? 'Bravo' : 'Alpha';
         const target = gameState.teams[team].target;
         const enemyPos = gameState.teams[enemyTeam].pos;
 
         if (target.x === enemyPos.x && target.y === enemyPos.y) {
-            gameState.teams[enemyTeam].hp -= 50;
-            io.to(team).emit('sonar_ping', { message: `💥 CONFIRMED HIT on target vector X:${target.x} Y:${target.y}!` });
-            io.to(enemyTeam).emit('sonar_ping', { message: `🚨 EMERGENCY! Direct hull strike at vector X:${target.x} Y:${target.y}!` });
+            const enemyShields = gameState.teams[enemyTeam].power.shields;
+            const mitigatedDamage = Math.max(0, 50 - (enemyShields * 10));
+            
+            gameState.teams[enemyTeam].hp -= mitigatedDamage;
+            
+            io.to(team).emit('sonar_ping', { message: `💥 CONFIRMED HIT on target X:${target.x} Y:${target.y}! Penetrated armor for ${mitigatedDamage} damage.` });
+            io.to(enemyTeam).emit('sonar_ping', { message: `🚨 EMERGENCY! Direct hull strike at X:${target.x} Y:${target.y}! Defenses absorbed some impact. Took ${mitigatedDamage} damage.` });
         } else {
             io.to(team).emit('sonar_ping', { message: `💦 Torpedo missed at vector X:${target.x} Y:${target.y}.` });
             io.to(enemyTeam).emit('sonar_ping', { message: `Sonar reports splash down noise at vector X:${target.x} Y:${target.y}.` });
@@ -108,7 +145,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Dynamic room roster cleanup on socket drop
     socket.on('disconnect', () => {
         const team = socket.team;
         const role = socket.role;
@@ -118,20 +154,16 @@ io.on('connection', (socket) => {
         }
     });
 
-    // ADMIN/PLAYER: Reset Game State back to defaults
     socket.on('reset_game', () => {
         gameState = {
             active: true,
             teams: {
-                Alpha: { pos: { x: 2, y: 2 }, hp: 100, target: { x: 4, y: 4 }, roster: [] },
-                Bravo: { pos: { x: 7, y: 7 }, hp: 100, target: { x: 4, y: 4 }, roster: [] }
+                Alpha: { pos: { x: 2, y: 2 }, hp: 100, target: { x: 4, y: 4 }, roster: [], power: { engines: 2, weapons: 2, shields: 2 } },
+                Bravo: { pos: { x: 7, y: 7 }, hp: 100, target: { x: 4, y: 4 }, roster: [], power: { engines: 2, weapons: 2, shields: 2 } }
             }
         };
-        
-        // Broadcast the specific reset signal to all connected clients
         io.emit('game_over', { winner: 'SYSTEM RESET' }); 
     });
-
 });
 
 const PORT = process.env.PORT || 3000;
