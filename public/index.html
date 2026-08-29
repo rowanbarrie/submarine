@@ -164,7 +164,7 @@
             </div>
         </div>
 
-        <!-- Captain Panel with Integrated Map Matrix -->
+        <!-- Captain Panel with Integrated Multi-Station Overrides -->
         <div id="panel-Captain" class="hidden">
             <p style="text-align: center; color: #f59e0b; margin-bottom: 5px;">NAV-CON HELM & TACTICAL MAP</p>
             
@@ -175,11 +175,29 @@
                 🔵 Blue = Your Location | 🎯 Tap any tile to update Weapons Lock
             </p>
 
+            <!-- Navigation Controls -->
             <div class="grid" style="margin-bottom: 20px;">
                 <div></div><button onclick="move('N')">▲ N</button><div></div>
                 <button onclick="move('W')">◀ W</button><div class="coords" id="coords">X:2 Y:2</div><button onclick="move('E')">E ▶</button>
                 <div></div><button onclick="move('S')">▼ S</button><div></div>
             </div>
+
+            <hr style="border-color: #1f293d; margin: 15px 0;">
+
+	    <!-- SOLO/MULTIPLAYER INTEGRATED COMBAT DRIVES -->
+            <div id="bridge-fire-control" class="hidden">
+                <hr style="border-color: #1f293d; margin: 15px 0;">
+                <p style="text-align: center; color: #dc2626; margin-bottom: 10px; font-size: 14px;">INTEGRATED FIRE CONTROL</p>
+                <button onclick="fireTorpedo()" class="fire-btn" style="margin-bottom: 20px;">💥 LAUNCH TORPEDO STRIKE</button>
+            </div>
+
+            <div id="bridge-sonar-feed">
+                <p style="text-align: center; color: #39ff14; margin-bottom: 5px; font-size: 14px;">HELM SONAR REPEATER FEED</p>
+                <div class="logs" id="captain-sonar-logs" style="height: 100px;">
+                    <div style="color: #6b7280;">[HYDROPHONE BRIDGE REPEATER ONLINE]</div>
+                </div>
+            </div>
+
         </div>
 
         <!-- Sonar Panel with Visual Chart Overlay -->
@@ -352,37 +370,57 @@
             }
         }
 
-        // Update your existing state_update routine to handle grid layers painting
         socket.on('state_update', (data) => {
             if(!data.active) return;
             document.getElementById('display-hp').innerText = `${data.teamState.hp}%`;
-
+            
             if (data.teamState.pos) {
                 ownPos = data.teamState.pos;
             }
 
-            // Real-time matrix redraw logic for Captain map views
             if (currentRole === 'Captain') {
                 if (data.teamState.pos) {
                     document.getElementById('coords').innerText = `X:${data.teamState.pos.x} Y:${data.teamState.pos.y}`;
                 }
-
-                // Clear all previous highlight classes across the matrix
+                
                 document.querySelectorAll('.helm-tile').forEach(tile => {
                     tile.classList.remove('sub-here', 'target-locked');
                 });
 
-                // Paint own submarine location marker layer
                 if (data.teamState.pos) {
                     const subTile = document.getElementById(`helm-tile-${data.teamState.pos.x}-${data.teamState.pos.y}`);
                     if (subTile) subTile.classList.add('sub-here');
                 }
 
-                // Paint weapons target coordinate locking crosshair layer
                 if (data.teamState.target) {
                     const targetTile = document.getElementById(`helm-tile-${data.teamState.target.x}-${data.teamState.target.y}`);
                     if (targetTile) targetTile.classList.add('target-locked');
                 }
+
+                // DYNAMIC BALANCING: Check team roster to hide/show solo tools safely
+                if (data.teamState && data.teamState.roster) {
+                    const roster = data.teamState.roster;
+                    
+                    const fireControl = document.getElementById('bridge-fire-control');
+                    const sonarFeed = document.getElementById('bridge-sonar-feed');
+                    
+                    if (fireControl && sonarFeed) {
+                        // Solo/1v1 Fix: If nobody has picked Weapons, Captain MUST see the fire button
+                        if (roster.includes('Weapons')) {
+                            fireControl.classList.add('hidden');
+                        } else {
+                            fireControl.classList.remove('hidden');
+                        }
+
+                        // Solo/1v1 Fix: If nobody has picked Sonar, Captain MUST see the logs
+                        if (roster.includes('Sonar')) {
+                            sonarFeed.classList.add('hidden');
+                        } else {
+                            sonarFeed.classList.remove('hidden');
+                        }
+                    }
+                }
+
             }
 
             if (currentRole === 'Weapons' && data.teamState.target) {
@@ -391,17 +429,25 @@
         });
 
         socket.on('sonar_ping', (data) => {
-            const logs = document.getElementById('sonar-logs');
-            if (currentRole === 'Sonar' && logs) {
-                logs.innerHTML += `<div class="warn">⚠️ ${data.message}</div>`;
-                logs.scrollTop = logs.scrollHeight; // Auto-scroll
+            // ROUTE TO STANDARD SONAR PANEL
+            const sonarLogs = document.getElementById('sonar-logs');
+            if (currentRole === 'Sonar' && sonarLogs) {
+                sonarLogs.innerHTML += `<div class="warn">⚠️ ${data.message}</div>`;
+                sonarLogs.scrollTop = sonarLogs.scrollHeight; // Auto-scroll
 
-                // Regex search to extract the numeric distance from the server string message
+                // Run the automatic radar ring calculation mapping we built earlier
                 const distanceMatch = data.message.match(/Distance:\s*(\d+)/);
-                if (distanceMatch && distanceMatch[1]) {
+                if (distanceMatch) {
                     const parsedDistance = parseInt(distanceMatch[1], 10);
                     highlightDistanceRing(parsedDistance);
                 }
+            }
+
+            // ROUTE TO CAPTAIN PANEL (BRIDGE REPEATER)
+            const captainLogs = document.getElementById('captain-sonar-logs');
+            if (currentRole === 'Captain' && captainLogs) {
+                captainLogs.innerHTML += `<div class="warn">⚠️ ${data.message}</div>`;
+                captainLogs.scrollTop = captainLogs.scrollHeight; // Auto-scroll
             }
         });
 

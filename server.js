@@ -27,7 +27,21 @@ io.on('connection', (socket) => {
         socket.join(team);
         socket.team = team;
         socket.role = role;
-        socket.emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
+
+        // Initialize a roster array for the team if it doesn't exist
+        if (!gameState.teams[team].roster) {
+            gameState.teams[team].roster = [];
+        }
+        // Add this role to the roster if it's not already there
+        if (!gameState.teams[team].roster.includes(role)) {
+            gameState.teams[team].roster.push(role);
+        }
+
+        // Broadcast the update to the team room
+        io.to(team).emit('state_update', { 
+            teamState: gameState.teams[team], 
+            active: gameState.active 
+        });
     });
 
     // CAPTAIN: Move Sub
@@ -41,6 +55,7 @@ io.on('connection', (socket) => {
         if (direction === 'E' && pos.x < 8) pos.x++;
         if (direction === 'W' && pos.x > 1) pos.x--;
 
+        // Pass the absolute team object containing positional math and roster structures
         io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
         
         // SONAR MATH
@@ -57,12 +72,19 @@ io.on('connection', (socket) => {
         io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
     });
 
-    // WEAPONS: Fire Torpedo
+    // WEAPONS / CAPTAIN OVERRIDE: Fire Torpedo
     socket.on('fire_torpedo', () => {
-        if (!gameState.active || socket.role !== 'Weapons') return;
-        const team = socket.team;
-        const enemyTeam = team === 'Alpha' ? 'Bravo' : 'Alpha';
+        if (!gameState.active) return;
         
+        const team = socket.team;
+        const role = socket.role;
+        const roster = gameState.teams[team].roster || [];
+
+        // Allow if player is Weapons Officer, OR if they are Captain and no Weapons Officer is registered
+        const isAuthorizedCaptain = (role === 'Captain' && !roster.includes('Weapons'));
+        if (role !== 'Weapons' && !isAuthorizedCaptain) return;
+        
+        const enemyTeam = team === 'Alpha' ? 'Bravo' : 'Alpha';
         const target = gameState.teams[team].target;
         const enemyPos = gameState.teams[enemyTeam].pos;
 
@@ -89,13 +111,13 @@ io.on('connection', (socket) => {
         gameState = {
             active: true,
             teams: {
-                Alpha: { pos: { x: 2, y: 2 }, hp: 100, target: { x: 4, y: 4 } },
-                Bravo: { pos: { x: 7, y: 7 }, hp: 100, target: { x: 4, y: 4 } }
+                Alpha: { pos: { x: 2, y: 2 }, hp: 100, target: { x: 4, y: 4 }, roster: [] },
+                Bravo: { pos: { x: 7, y: 7 }, hp: 100, target: { x: 4, y: 4 }, roster: [] }
             }
         };
-
-        // Notify all clients across both teams to instantly reload their screens
-        io.emit('game_over', { winner: 'SYSTEM RESET' });
+        
+        // Broadcast the specific reset signal to all connected clients
+        io.emit('game_over', { winner: 'SYSTEM RESET' }); 
     });
 
 });
