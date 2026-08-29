@@ -78,6 +78,55 @@
             to { box-shadow: inset 0 0 12px rgba(245,158,11,0.5); }
         }
 
+        /* Captain's Navigation Map Grid Matrix */
+        .helm-matrix {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            max-width: 360px;
+            margin: 15px auto;
+            background: #111827;
+            padding: 8px;
+            border: 1px solid #f59e0b;
+            border-radius: 6px;
+        }
+        .helm-tile {
+            aspect-ratio: 1;
+            background: #1f293d;
+            border: 1px solid #374151;
+            color: #4b5563;
+            font-size: 10px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: all 0.2s ease;
+        }
+        .helm-tile:hover {
+            border-color: #f59e0b;
+        }
+        /* Submarine Position Indicator Overlay */
+        .helm-tile.sub-here {
+            background: rgba(59, 130, 246, 0.4);
+            border-color: #3b82f6;
+            color: #ffffff;
+            box-shadow: 0 0 10px #3b82f6;
+        }
+        /* Weapons Target Lock Crosshair Overlay */
+        .helm-tile.target-locked {
+            background: rgba(220, 38, 38, 0.4);
+            border-color: #ef4444;
+            color: #ffffff;
+            box-shadow: 0 0 10px #ef4444;
+        }
+        /* Intersection State (Sub is targeting its own sector) */
+        .helm-tile.sub-here.target-locked {
+            background: linear-gradient(45deg, #3b82f6, #ef4444);
+            border-color: #f59e0b;
+        }
+
     </style>
 </head>
 <body>
@@ -114,21 +163,22 @@
             </div>
         </div>
 
-        <!-- Captain Panel -->
+        <!-- Captain Panel with Integrated Map Matrix -->
         <div id="panel-Captain" class="hidden">
-            <p style="text-align: center; color: #f59e0b; margin-bottom: 10px;">NAV-CON HELM</p>
+            <p style="text-align: center; color: #f59e0b; margin-bottom: 5px;">NAV-CON HELM & TACTICAL MAP</p>
+            
+            <!-- Dynamic 8x8 Grid Interface Viewport -->
+            <div class="helm-matrix" id="captain-map-grid"></div>
+            
+            <p style="text-align: center; color: #6b7280; font-size: 11px; margin: 0 0 15px 0;">
+                🔵 Blue = Your Location | 🎯 Tap any tile to update Weapons Lock
+            </p>
+
             <div class="grid" style="margin-bottom: 20px;">
                 <div></div><button onclick="move('N')">▲ N</button><div></div>
                 <button onclick="move('W')">◀ W</button><div class="coords" id="coords">X:2 Y:2</div><button onclick="move('E')">E ▶</button>
                 <div></div><button onclick="move('S')">▼ S</button><div></div>
             </div>
-            <hr style="border-color: #1f293d; margin-bottom: 15px;">
-            <p style="text-align: center; color: #dc2626; margin-bottom: 10px;">WEAPONS LOCK TARGET</p>
-            <div style="display: flex; gap: 10px;">
-                <input type="number" id="target-x" placeholder="X (1-8)" min="1" max="8" style="margin:0;">
-                <input type="number" id="target-y" placeholder="Y (1-8)" min="1" max="8" style="margin:0;">
-            </div>
-            <button onclick="lockTarget()" class="action-btn" style="margin-top:10px;">TRANSMIT TARGET DATA</button>
         </div>
 
         <!-- Sonar Panel with Visual Chart Overlay -->
@@ -192,6 +242,11 @@
             // DYNAMICALLY GENERATE SONAR GRID WORKBOOK
             if (role === 'Sonar') {
                 generateSonarGrid();
+            }
+
+            // DYNAMICALLY GENERATE CAPTAIN TACTICAL HELM
+            if (role === 'Captain') {
+                generateCaptainGrid();
             }
 
             socket.emit('join_game', { team, role });
@@ -268,18 +323,61 @@
             socket.emit('fire_torpedo');
         }
 
+        function generateCaptainGrid() {
+            const gridContainer = document.getElementById('captain-map-grid');
+            if (!gridContainer) return;
+            gridContainer.innerHTML = '';
+
+            for (let y = 1; y <= 8; y++) {
+                for (let x = 1; x <= 8; x++) {
+                    const tile = document.createElement('div');
+                    tile.className = 'helm-tile';
+                    tile.id = `helm-tile-${x}-${y}`;
+                    tile.innerText = `${x},${y}`;
+
+                    // Tapping sets weapons target coordinates system immediately
+                    tile.addEventListener('click', () => {
+                        socket.emit('set_target', { x, y });
+                    });
+
+                    gridContainer.appendChild(tile);
+                }
+            }
+        }
+
+        // Update your existing state_update routine to handle grid layers painting
         socket.on('state_update', (data) => {
             if(!data.active) return;
             document.getElementById('display-hp').innerText = `${data.teamState.hp}%`;
 
-            // Sync our local tracking variable with current position coordinates sent by server
             if (data.teamState.pos) {
                 ownPos = data.teamState.pos;
             }
 
-            if (currentRole === 'Captain' && data.teamState.pos) {
-                document.getElementById('coords').innerText = `X:${data.teamState.pos.x} Y:${data.teamState.pos.y}`;
+            // Real-time matrix redraw logic for Captain map views
+            if (currentRole === 'Captain') {
+                if (data.teamState.pos) {
+                    document.getElementById('coords').innerText = `X:${data.teamState.pos.x} Y:${data.teamState.pos.y}`;
+                }
+
+                // Clear all previous highlight classes across the matrix
+                document.querySelectorAll('.helm-tile').forEach(tile => {
+                    tile.classList.remove('sub-here', 'target-locked');
+                });
+
+                // Paint own submarine location marker layer
+                if (data.teamState.pos) {
+                    const subTile = document.getElementById(`helm-tile-${data.teamState.pos.x}-${data.teamState.pos.y}`);
+                    if (subTile) subTile.classList.add('sub-here');
+                }
+
+                // Paint weapons target coordinate locking crosshair layer
+                if (data.teamState.target) {
+                    const targetTile = document.getElementById(`helm-tile-${data.teamState.target.x}-${data.teamState.target.y}`);
+                    if (targetTile) targetTile.classList.add('target-locked');
+                }
             }
+
             if (currentRole === 'Weapons' && data.teamState.target) {
                 document.getElementById('weapons-target-display').innerText = `X: ${data.teamState.target.x} | Y: ${data.teamState.target.y}`;
             }
