@@ -24,6 +24,8 @@ function calculateDistance(pos1, pos2) {
 
 io.on('connection', (socket) => {
     socket.on('join_game', ({ team, role }) => {
+        socket.team = team;
+        socket.role = role;
         socket.join(team);
         socket.team = team;
         socket.role = role;
@@ -103,6 +105,16 @@ io.on('connection', (socket) => {
         if (gameState.teams[enemyTeam].hp <= 0) {
             gameState.active = false;
             io.emit('game_over', { winner: team });
+        }
+    });
+
+    // Dynamic room roster cleanup on socket drop
+    socket.on('disconnect', () => {
+        const team = socket.team;
+        const role = socket.role;
+        if (team && gameState.teams[team] && gameState.teams[team].roster) {
+            gameState.teams[team].roster = gameState.teams[team].roster.filter(r => r !== role);
+            io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
         }
     });
 
