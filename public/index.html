@@ -22,6 +22,50 @@
         .coords { display: flex; align-items: center; justify-content: center; font-size: 12px; border: 1px solid #374151; }
         .logs { background: black; border: 1px solid #39ff14; padding: 10px; height: 200px; border-radius: 4px; overflow-y: auto; font-size: 12px; margin-bottom: 15px; }
         .warn { color: #f59e0b; margin-bottom: 4px; }
+
+        /* 8x8 Sonar Visual Map Matrix Layout */
+        .sonar-matrix {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            max-width: 360px;
+            margin: 15px auto;
+            background: #111827;
+            padding: 8px;
+            border: 1px solid #10b981;
+            border-radius: 6px;
+        }
+        .sonar-tile {
+            aspect-ratio: 1;
+            background: #1f293d;
+            border: 1px solid #374151;
+            color: #4b5563;
+            font-size: 10px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: all 0.2s ease;
+        }
+        .sonar-tile:hover {
+            border-color: #10b981;
+        }
+        /* Active Cycling State Colors */
+        .sonar-tile.state-possible {
+            background: rgba(5, 150, 105, 0.3);
+            border-color: #39ff14;
+            color: #39ff14;
+            box-shadow: inset 0 0 8px rgba(57,255,20,0.4);
+        }
+        .sonar-tile.state-splash {
+            background: rgba(220, 38, 38, 0.3);
+            border-color: #ef4444;
+            color: #ef4444;
+            box-shadow: inset 0 0 8px rgba(239,68,68,0.4);
+        }
+
     </style>
 </head>
 <body>
@@ -75,9 +119,17 @@
             <button onclick="lockTarget()" class="action-btn" style="margin-top:10px;">TRANSMIT TARGET DATA</button>
         </div>
 
-        <!-- Sonar Panel -->
+        <!-- Sonar Panel with Visual Chart Overlay -->
         <div id="panel-Sonar" class="hidden">
-            <p style="text-align: center; color: #39ff14; margin-bottom: 10px;">PASSIVE SONAR RADAR FEED</p>
+            <p style="text-align: center; color: #39ff14; margin-bottom: 5px;">PASSIVE SONAR RADAR FEED</p>
+            
+            <!-- Dynamic 8x8 Grid Chart Workbook -->
+            <div class="sonar-matrix" id="sonar-chart-grid"></div>
+            
+            <p style="text-align: center; color: #6b7280; font-size: 11px; margin: 0 0 10px 0;">
+                💡 Tap cells to cycle flags: Clear ➡️ 🟩 Possible ➡️ 🟥 Splashdown
+            </p>
+
             <div class="logs" id="sonar-logs">
                 <div style="color: #6b7280;">[HYDROPHONES ONLINE]</div>
             </div>
@@ -96,6 +148,11 @@
         <!-- Engineer Panel -->
         <div id="panel-Engineer" class="hidden" style="text-align: center; color: #9ca3af; font-style: italic; margin-top: 40px;">
             System monitors operational. Listen closely to room chatter to prepare hull repair tasks.
+        </div>
+
+        <!-- Generic Safe Fallback Panel -->
+        <div id="panel-Generic" class="hidden" style="text-align: center; color: #ef4444; margin-top: 40px;">
+            ⚠️ Command Interface Error. Role panel configuration missing.
         </div>
     </div>
 
@@ -117,6 +174,34 @@
                 specificPanel.classList.remove('hidden');
             } else {
                 document.getElementById('panel-Generic').classList.remove('hidden');
+            }
+
+            // DYNAMICALLY GENERATE SONAR GRID WORKBOOK
+            if (role === 'Sonar') {
+                const gridContainer = document.getElementById('sonar-chart-grid');
+                gridContainer.innerHTML = ''; // Clean initialization buffer
+
+                for (let y = 1; y <= 8; y++) {
+                    for (let x = 1; x <= 8; x++) {
+                        const tile = document.createElement('div');
+                        tile.className = 'sonar-tile';
+                        tile.innerText = `${x},${y}`;
+                        
+                        // Local workflow marker state cycling behavior
+                        tile.addEventListener('click', () => {
+                            if (!tile.classList.contains('state-possible') && !tile.classList.contains('state-splash')) {
+                                tile.classList.add('state-possible');
+                            } else if (tile.classList.contains('state-possible')) {
+                                tile.classList.remove('state-possible');
+                                tile.classList.add('state-splash');
+                            } else {
+                                tile.classList.remove('state-splash');
+                            }
+                        });
+                        
+                        gridContainer.appendChild(tile);
+                    }
+                }
             }
 
             socket.emit('join_game', { team, role });
