@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Silent Depth</title>
+    <script src="https://jsdelivr.net"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="bg-gray-900 text-green-400 font-mono p-4 select-none">
+
+    <!-- Setup Screen -->
+    <div id="setup-screen" class="max-w-md mx-auto my-20 bg-gray-800 p-6 rounded-lg border border-green-500">
+        <h1 class="text-2xl font-bold mb-6 text-center tracking-widest text-green-500">SILENT DEPTH</h1>
+        <label class="block mb-2">Select Team:</label>
+        <select id="team-select" class="w-full bg-gray-700 p-2 mb-4 rounded border border-gray-600 text-white">
+            <option value="Alpha">Team Alpha (Red Room)</option>
+            <option value="Bravo">Team Bravo (Blue Room)</option>
+        </select>
+        
+        <label class="block mb-2">Select Station Role:</label>
+        <select id="role-select" class="w-full bg-gray-700 p-2 mb-6 rounded border border-gray-600 text-white">
+            <option value="Captain">Captain (Helm & Orders)</option>
+            <option value="Sonar">Sonar Technician (Tracking)</option>
+            <option value="Engineer">Chief Engineer (Repairs)</option>
+            <option value="Weapons">Weapons Officer (Torpedoes)</option>
+        </select>
+        <button onclick="joinGame()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded shadow-lg transition">BATTLE STATIONS</button>
+    </div>
+
+    <!-- Gameplay Screen (Hidden initially) -->
+    <div id="game-screen" class="hidden max-w-md mx-auto">
+        <header class="flex justify-between items-center mb-4 border-b border-green-700 pb-2">
+            <div>
+                <span class="text-xs text-gray-400">STATION:</span>
+                <h2 id="display-role" class="text-xl font-bold text-white">Role</h2>
+            </div>
+            <div class="text-right">
+                <span class="text-xs text-gray-400">HULL INTEGRITY:</span>
+                <div id="display-hp" class="text-xl font-bold text-red-500">100%</div>
+            </div>
+        </header>
+
+        <!-- Captain Panel -->
+        <div id="panel-Captain" class="hidden space-y-4">
+            <p class="text-center text-sm text-yellow-500">NAV-CON INTERFACE</p>
+            <div class="grid grid-cols-3 gap-2 max-w-xs mx-auto">
+                <div></div>
+                <button onclick="move('N')" class="bg-gray-800 border border-green-500 py-4 font-bold rounded">▲ N</button>
+                <div></div>
+                <button onclick="move('W')" class="bg-gray-800 border border-green-500 py-4 font-bold rounded">◀ W</button>
+                <div class="flex items-center justify-center bg-gray-900 border border-gray-700 text-xs text-center" id="coords">X:1 Y:1</div>
+                <button onclick="move('E')" class="bg-gray-800 border border-green-500 py-4 font-bold rounded">E ▶</button>
+                <div></div>
+                <button onclick="move('S')" class="bg-gray-800 border border-green-500 py-4 font-bold rounded">▼ S</button>
+                <div></div>
+            </div>
+        </div>
+
+        <!-- Sonar Panel -->
+        <div id="panel-Sonar" class="hidden">
+            <div class="bg-black border border-green-500 p-4 h-48 rounded flex flex-col justify-end overflow-hidden" id="sonar-logs">
+                <div class="text-xs text-gray-500">[SYSTEM INITIALISED]</div>
+            </div>
+        </div>
+
+        <!-- Fallback message for other roles in MVP stage -->
+        <div id="panel-Generic" class="hidden text-center py-10 text-gray-400 italic">
+            Station mechanics online. Awaiting system orders from the bridge.
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let currentRole = '';
+
+        function joinGame() {
+            const team = document.getElementById('team-select').value;
+            const role = document.getElementById('role-select').value;
+            currentRole = role;
+
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            document.getElementById('display-role').innerText = `${team} - ${role}`;
+
+            // Show active panel
+            const specificPanel = document.getElementById(`panel-${role}`);
+            if (specificPanel) {
+                specificPanel.classList.remove('hidden');
+            } else {
+                document.getElementById('panel-Generic').classList.remove('hidden');
+            }
+
+            socket.emit('join_game', { team, role });
+        }
+
+        function move(dir) {
+            socket.emit('move_sub', dir);
+        }
+
+        socket.on('state_update', (data) => {
+            document.getElementById('display-hp').innerText = `${data.hp}%`;
+            if (currentRole === 'Captain' && data.pos) {
+                document.getElementById('coords').innerText = `X:${data.pos.x} Y:${data.pos.y}`;
+            }
+        });
+
+        socket.on('sonar_ping', (data) => {
+            if (currentRole === 'Sonar') {
+                const logs = document.getElementById('sonar-logs');
+                logs.innerHTML += `<div class="text-xs text-yellow-400">⚠️ ${data.message}</div>`;
+            }
+        });
+    </script>
+</body>
+</html>
+
