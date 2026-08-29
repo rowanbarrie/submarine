@@ -6,9 +6,20 @@ System prompts, guardrails, and file-modification rules for AI code assistants w
 
 ## 🛠️ Code Modification Protocols (Critical)
 
-To minimize manual developer copy-pasting, AI agents **MUST** provide changes as executable shell commands or explicit patch blocks.
+To minimize manual developer copy-pasting, AI agents **MUST** prioritize providing changes as unified git patch files or executable shell commands rather than writing out entire file contents for manual injection.
 
-### 1. Line Modifications via `sed`
+### 1. Multi-line Updates via Unified Git Patches (Preferred)
+For any structural, multi-line, or complex additions and deletions, supply a clean **Unified Diff** format (`diff -u`) compatible with the Linux `patch` tool. This is the primary method for making structural changes.
+
+```diff
+--- server.js
++++ server.js
+@@ -15,2 +15,2 @@
+-            hp: 100, 
++            hp: 150, 
+```
+
+### 2. Quick Line Modifications via `sed`
 For targeted line edits, provide single-line Stream Editor (`sed`) commands with explicit patterns.
 ```bash
 # Example: Update starting HP for Team Alpha inside server.js
