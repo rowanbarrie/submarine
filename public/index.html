@@ -423,6 +423,11 @@
 
             }
 
+            // Sonar station tracking synchronization hook
+            if (currentRole === 'Sonar' && data.teamState.pos) {
+                ownPos = data.teamState.pos;
+            }
+
             if (currentRole === 'Weapons' && data.teamState.target) {
                 document.getElementById('weapons-target-display').innerText = `X: ${data.teamState.target.x} | Y: ${data.teamState.target.y}`;
             }
