@@ -10,16 +10,18 @@
         .card { background: #161e2e; border: 1px solid #39ff14; padding: 20px; border-radius: 8px; max-width: 400px; margin: 40px auto; box-shadow: 0 0 15px rgba(57,255,20,0.2); }
         h1, h2 { text-align: center; letter-spacing: 2px; margin-top: 0; }
         label { display: block; margin-bottom: 8px; font-size: 14px; }
-        select, button { w-width: 100%; width: 100%; box-sizing: border-box; background: #1f293d; border: 1px solid #4b5563; color: white; padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size: 16px; }
+        select, button, input { width: 100%; box-sizing: border-box; background: #1f293d; border: 1px solid #4b5563; color: white; padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size: 16px; }
         button.action-btn { background: #059669; border: none; font-weight: bold; color: white; cursor: pointer; }
         button.action-btn:hover { background: #047857; }
+        button.fire-btn { background: #dc2626; border: none; font-weight: bold; color: white; cursor: pointer; }
+        button.fire-btn:hover { background: #b91c1c; }
         .hidden { display: none; }
         .header { display: flex; justify-content: space-between; border-bottom: 1px solid #047857; padding-bottom: 10px; margin-bottom: 20px; }
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 300px; margin: 0 auto; }
         .grid button { margin: 0; padding: 20px 0; background: #161e2e; border: 1px solid #39ff14; color: #39ff14; font-weight: bold; }
         .coords { display: flex; align-items: center; justify-content: center; font-size: 12px; border: 1px solid #374151; }
-        .logs { background: black; border: 1px solid #39ff14; padding: 10px; h-height: 180px; height: 180px; border-radius: 4px; overflow-y: auto; display: flex; flex-direction: column; justify-content: flex-end; font-size: 12px; }
-        .warn { color: #f59e0b; }
+        .logs { background: black; border: 1px solid #39ff14; padding: 10px; height: 200px; border-radius: 4px; overflow-y: auto; font-size: 12px; margin-bottom: 15px; }
+        .warn { color: #f59e0b; margin-bottom: 4px; }
     </style>
 </head>
 <body>
@@ -37,8 +39,8 @@
         <select id="role-select">
             <option value="Captain">Captain (Helm & Orders)</option>
             <option value="Sonar">Sonar Technician (Tracking)</option>
-            <option value="Engineer">Chief Engineer (Repairs)</option>
             <option value="Weapons">Weapons Officer (Torpedoes)</option>
+            <option value="Engineer">Chief Engineer (Repairs)</option>
         </select>
         <button onclick="joinGame()" class="action-btn">BATTLE STATIONS</button>
     </div>
@@ -58,35 +60,47 @@
 
         <!-- Captain Panel -->
         <div id="panel-Captain" class="hidden">
-            <p style="text-align: center; color: #f59e0b; margin-bottom: 20px;">NAV-CON INTERFACE</p>
-            <div class="grid">
-                <div></div>
-                <button onclick="move('N')">▲ N</button>
-                <div></div>
-                <button onclick="move('W')">◀ W</button>
-                <div class="coords" id="coords">X:1 Y:1</div>
-                <button onclick="move('E')">E ▶</button>
-                <div></div>
-                <button onclick="move('S')">▼ S</button>
-                <div></div>
+            <p style="text-align: center; color: #f59e0b; margin-bottom: 10px;">NAV-CON HELM</p>
+            <div class="grid" style="margin-bottom: 20px;">
+                <div></div><button onclick="move('N')">▲ N</button><div></div>
+                <button onclick="move('W')">◀ W</button><div class="coords" id="coords">X:2 Y:2</div><button onclick="move('E')">E ▶</button>
+                <div></div><button onclick="move('S')">▼ S</button><div></div>
             </div>
+            <hr style="border-color: #1f293d; margin-bottom: 15px;">
+            <p style="text-align: center; color: #dc2626; margin-bottom: 10px;">WEAPONS LOCK TARGET</p>
+            <div style="display: flex; gap: 10px;">
+                <input type="number" id="target-x" placeholder="X (1-8)" min="1" max="8" style="margin:0;">
+                <input type="number" id="target-y" placeholder="Y (1-8)" min="1" max="8" style="margin:0;">
+            </div>
+            <button onclick="lockTarget()" class="action-btn" style="margin-top:10px;">TRANSMIT TARGET DATA</button>
         </div>
 
         <!-- Sonar Panel -->
         <div id="panel-Sonar" class="hidden">
+            <p style="text-align: center; color: #39ff14; margin-bottom: 10px;">PASSIVE SONAR RADAR FEED</p>
             <div class="logs" id="sonar-logs">
-                <div style="color: #6b7280;">[SYSTEM INITIALISED]</div>
+                <div style="color: #6b7280;">[HYDROPHONES ONLINE]</div>
             </div>
         </div>
 
-        <!-- Fallback Panel -->
-        <div id="panel-Generic" class="hidden" style="text-align: center; color: #9ca3af; font-style: italic; margin-top: 40px;">
-            Station mechanics online. Awaiting system orders from the bridge.
+        <!-- Weapons Panel -->
+        <div id="panel-Weapons" class="hidden">
+            <p style="text-align: center; color: #dc2626; margin-bottom: 15px;">TORPEDO BAY MANAGEMENT</p>
+            <div style="background: #161e2e; border: 1px solid #4b5563; padding: 15px; border-radius: 4px; margin-bottom: 15px; text-center: center;">
+                <span style="font-size: 12px; color: #9ca3af;">BRIDGE TARGET ACQUISITION:</span>
+                <div id="weapons-target-display" style="font-size: 24px; font-weight: bold; color: #f59e0b; text-align: center; margin: 10px 0;">X: 1 | Y: 1</div>
+            </div>
+            <button onclick="fireTorpedo()" class="fire-btn">💥 MATCH PAYLOAD & FIRE</button>
+        </div>
+
+        <!-- Engineer Panel -->
+        <div id="panel-Engineer" class="hidden" style="text-align: center; color: #9ca3af; font-style: italic; margin-top: 40px;">
+            System monitors operational. Listen closely to room chatter to prepare hull repair tasks.
         </div>
     </div>
 
     <script>
-        const socket = io();
+        const socket = io({ transports: ['websocket'] });
         let currentRole = '';
 
         function joinGame() {
@@ -112,20 +126,43 @@
             socket.emit('move_sub', dir);
         }
 
+        function lockTarget() {
+            const x = document.getElementById('target-x').value;
+            const y = document.getElementById('target-y').value;
+            if(x && y) {
+                socket.emit('set_target', { x, y });
+            }
+        }
+
+        function fireTorpedo() {
+            socket.emit('fire_torpedo');
+        }
+
         socket.on('state_update', (data) => {
-            document.getElementById('display-hp').innerText = `${data.hp}%`;
-            if (currentRole === 'Captain' && data.pos) {
-                document.getElementById('coords').innerText = `X:${data.pos.x} Y:${data.pos.y}`;
+            if(!data.active) return;
+            document.getElementById('display-hp').innerText = `${data.teamState.hp}%`;
+            
+            if (currentRole === 'Captain' && data.teamState.pos) {
+                document.getElementById('coords').innerText = `X:${data.teamState.pos.x} Y:${data.teamState.pos.y}`;
+            }
+            if (currentRole === 'Weapons' && data.teamState.target) {
+                document.getElementById('weapons-target-display').innerText = `X: ${data.teamState.target.x} | Y: ${data.teamState.target.y}`;
             }
         });
 
         socket.on('sonar_ping', (data) => {
-            if (currentRole === 'Sonar') {
-                const logs = document.getElementById('sonar-logs');
+            // Both Sonar technicians AND Weapons / Captain see strategic logs
+            const logs = document.getElementById('sonar-logs');
+            if (currentRole === 'Sonar' && logs) {
                 logs.innerHTML += `<div class="warn">⚠️ ${data.message}</div>`;
+                logs.scrollTop = logs.scrollHeight; // Auto-scroll
             }
+        });
+
+        socket.on('game_over', (data) => {
+            alert(`GAME OVER! Team ${data.winner} has sunk the enemy submarine and rules the depth!`);
+            location.reload();
         });
     </script>
 </body>
 </html>
-

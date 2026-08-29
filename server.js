@@ -11,50 +11,84 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Global Game State
 let gameState = {
+    active: true,
     teams: {
-        Alpha: { pos: { x: 1, y: 1 }, hp: 100, charging: false },
-        Bravo: { pos: { x: 8, y: 8 }, hp: 100, charging: false }
+        Alpha: { pos: { x: 2, y: 2 }, hp: 100, torpedoReady: false, target: { x: 1, y: 1 } },
+        Bravo: { pos: { x: 7, y: 7 }, hp: 100, torpedoReady: false, target: { x: 1, y: 1 } }
     }
 };
 
-io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
+function calculateDistance(pos1, pos2) {
+    // Calculates Manhattan distance (grid steps)
+    return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y);
+}
 
-    // Join team and role
+io.on('connection', (socket) => {
     socket.on('join_game', ({ team, role }) => {
         socket.join(team);
         socket.team = team;
         socket.role = role;
-        console.log(`Player joined Team ${team} as ${role}`);
-        
-        // Send initial state to the user
-        socket.emit('state_update', gameState.teams[team]);
+        socket.emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
     });
 
-    // Captain order: Move
+    // CAPTAIN: Move Sub
     socket.on('move_sub', (direction) => {
+        if (!gameState.active || socket.role !== 'Captain') return;
         const team = socket.team;
-        if (socket.role !== 'Captain') return;
-
         let pos = gameState.teams[team].pos;
+
         if (direction === 'N' && pos.y > 1) pos.y--;
         if (direction === 'S' && pos.y < 8) pos.y++;
         if (direction === 'E' && pos.x < 8) pos.x++;
         if (direction === 'W' && pos.x > 1) pos.x--;
 
-        // Notify own team of movement
-        io.to(team).emit('state_update', gameState.teams[team]);
+        io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
         
-        // Notify enemy sonar (with a ping delay or abstract distance)
+        // SONAR MATH: Alert enemy Sonar of current distance bracket
         const enemyTeam = team === 'Alpha' ? 'Bravo' : 'Alpha';
-        io.to(enemyTeam).emit('sonar_ping', { message: "Cavitation detected nearby!" });
+        const dist = calculateDistance(gameState.teams[team].pos, gameState.teams[enemyTeam].pos);
+        io.to(enemyTeam).emit('sonar_ping', { message: `Engine signatures detected. Distance: ${dist} sectors away.` });
     });
 
-    socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
+    // CAPTAIN: Update Torpedo Coordinates Target
+    socket.on('set_target', ({ x, y }) => {
+        if (!gameState.active || socket.role !== 'Captain') return;
+        const team = socket.team;
+        gameState.teams[team].target = { x: parseInt(x), y: parseInt(y) };
+        io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
+    });
+
+    // WEAPONS: Fire Torpedo
+    socket.on('fire_torpedo', () => {
+        if (!gameState.active || socket.role !== 'Weapons') return;
+        const team = socket.team;
+        const enemyTeam = team === 'Alpha' ? 'Bravo' : 'Alpha';
+        
+        const target = gameState.teams[team].target;
+        const enemyPos = gameState.teams[enemyTeam].pos;
+
+        // Check for direct hit
+        if (target.x === enemyPos.x && target.y === enemyPos.y) {
+            gameState.teams[enemyTeam].hp -= 50;
+            io.to(team).emit('sonar_ping', { message: `💥 CONFIRMED HIT on target vector X:${target.x} Y:${target.y}!` });
+            io.to(enemyTeam).emit('sonar_ping', { message: `🚨 EMERGENCY! Direct hull strike at vector X:${target.x} Y:${target.y}!` });
+        } else {
+            io.to(team).emit('sonar_ping', { message: `💦 Torpedo missed at vector X:${target.x} Y:${target.y}. Impacting open water.` });
+            io.to(enemyTeam).emit('sonar_ping', { message: `Sonar reports splash down noise at vector X:${target.x} Y:${target.y}. No damage.` });
+        }
+
+        // Update health across teams
+        io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
+        io.to(enemyTeam).emit('state_update', { teamState: gameState.teams[enemyTeam], active: gameState.active });
+
+        // Win Condition check
+        if (gameState.teams[enemyTeam].hp <= 0) {
+            gameState.active = false;
+            io.emit('game_over', { winner: team });
+        }
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Submarine server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Game engine running on port ${PORT}`));
 
