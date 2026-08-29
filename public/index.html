@@ -66,6 +66,18 @@
             box-shadow: inset 0 0 8px rgba(239,68,68,0.4);
         }
 
+        /* Dynamic Sonar Radar Ring Highlight */
+        .sonar-tile.ring-highlight {
+            border-color: #f59e0b;
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.15);
+            animation: radarPulse 1.5s infinite alternate;
+        }
+        @keyframes radarPulse {
+            from { box-shadow: inset 0 0 4px rgba(245,158,11,0.2); }
+            to { box-shadow: inset 0 0 12px rgba(245,158,11,0.5); }
+        }
+
     </style>
 </head>
 <body>
@@ -156,9 +168,10 @@
         </div>
     </div>
 
-    <script>
+        <script>
         const socket = io({ transports: ['websocket'] });
         let currentRole = '';
+        let ownPos = { x: 2, y: 2 }; // Fallback defaults matching server initialization
 
         function joinGame() {
             const team = document.getElementById('team-select').value;
@@ -178,33 +191,65 @@
 
             // DYNAMICALLY GENERATE SONAR GRID WORKBOOK
             if (role === 'Sonar') {
-                const gridContainer = document.getElementById('sonar-chart-grid');
-                gridContainer.innerHTML = ''; // Clean initialization buffer
-
-                for (let y = 1; y <= 8; y++) {
-                    for (let x = 1; x <= 8; x++) {
-                        const tile = document.createElement('div');
-                        tile.className = 'sonar-tile';
-                        tile.innerText = `${x},${y}`;
-                        
-                        // Local workflow marker state cycling behavior
-                        tile.addEventListener('click', () => {
-                            if (!tile.classList.contains('state-possible') && !tile.classList.contains('state-splash')) {
-                                tile.classList.add('state-possible');
-                            } else if (tile.classList.contains('state-possible')) {
-                                tile.classList.remove('state-possible');
-                                tile.classList.add('state-splash');
-                            } else {
-                                tile.classList.remove('state-splash');
-                            }
-                        });
-                        
-                        gridContainer.appendChild(tile);
-                    }
-                }
+                generateSonarGrid();
             }
 
             socket.emit('join_game', { team, role });
+        }
+
+        function generateSonarGrid() {
+            const gridContainer = document.getElementById('sonar-chart-grid');
+            if (!gridContainer) return;
+            gridContainer.innerHTML = '';
+
+            for (let y = 1; y <= 8; y++) {
+                for (let x = 1; x <= 8; x++) {
+                    const tile = document.createElement('div');
+                    tile.className = 'sonar-tile';
+                    tile.id = `sonar-tile-${x}-${y}`; // ID hook for ring highlights
+                    tile.innerText = `${x},${y}`;
+
+                    // Manual tracking markers cycling behavior
+                    tile.addEventListener('click', () => {
+                        if (!tile.classList.contains('state-possible') && !tile.classList.contains('state-splash')) {
+                            tile.classList.add('state-possible');
+                        } else if (tile.classList.contains('state-possible')) {
+                            tile.classList.remove('state-possible');
+                            tile.classList.add('state-splash');
+                        } else {
+                            tile.classList.remove('state-splash');
+                        }
+                    });
+
+                    gridContainer.appendChild(tile);
+                }
+            }
+        }
+
+        // Helper function to calculate Manhattan Distance client-side
+        function clientCalculateDistance(p1, p2) {
+            return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
+        }
+
+        // Helper to sweep the grid and project the radar ring
+        function highlightDistanceRing(targetDistance) {
+            // Clear all previous ring highlights first
+            document.querySelectorAll('.sonar-tile').forEach(tile => {
+                tile.classList.remove('ring-highlight');
+            });
+
+            // Highlight cells matching the target Manhattan distance from our own sub
+            for (let y = 1; y <= 8; y++) {
+                for (let x = 1; x <= 8; x++) {
+                    const distanceToTile = clientCalculateDistance(ownPos, { x, y });
+                    if (distanceToTile === targetDistance) {
+                        const tileElement = document.getElementById(`sonar-tile-${x}-${y}`);
+                        if (tileElement) {
+                            tileElement.classList.add('ring-highlight');
+                        }
+                    }
+                }
+            }
         }
 
         function move(dir) {
@@ -226,7 +271,12 @@
         socket.on('state_update', (data) => {
             if(!data.active) return;
             document.getElementById('display-hp').innerText = `${data.teamState.hp}%`;
-            
+
+            // Sync our local tracking variable with current position coordinates sent by server
+            if (data.teamState.pos) {
+                ownPos = data.teamState.pos;
+            }
+
             if (currentRole === 'Captain' && data.teamState.pos) {
                 document.getElementById('coords').innerText = `X:${data.teamState.pos.x} Y:${data.teamState.pos.y}`;
             }
@@ -236,11 +286,17 @@
         });
 
         socket.on('sonar_ping', (data) => {
-            // Both Sonar technicians AND Weapons / Captain see strategic logs
             const logs = document.getElementById('sonar-logs');
             if (currentRole === 'Sonar' && logs) {
                 logs.innerHTML += `<div class="warn">⚠️ ${data.message}</div>`;
                 logs.scrollTop = logs.scrollHeight; // Auto-scroll
+
+                // Regex search to extract the numeric distance from the server string message
+                const distanceMatch = data.message.match(/Distance:\s*(\d+)/);
+                if (distanceMatch && distanceMatch[1]) {
+                    const parsedDistance = parseInt(distanceMatch[1], 10);
+                    highlightDistanceRing(parsedDistance);
+                }
             }
         });
 
@@ -251,3 +307,4 @@
     </script>
 </body>
 </html>
+
