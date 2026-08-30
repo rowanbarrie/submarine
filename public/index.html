@@ -223,7 +223,7 @@
                     tile.className = 'helm-tile';
                     tile.id = `helm-tile-${x}-${y}`;
                     tile.innerText = `${x},${y}`;
-                    tile.addEventListener('click', () => socket.emit('set_target', { x, y }));
+                    tile.addEventListener('click', () => socket.emit('set_target', { x: parseFloat(x), y: parseFloat(y) }));
                     gridContainer.appendChild(tile);
                 }
             }

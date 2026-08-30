@@ -9,20 +9,24 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Global Game State with Engineering Power Subsystems
+// Global Game State with 800x800 Continuous Coordinate Space
 let gameState = {
     active: true,
+    arena: {
+        width: 800.0,
+        height: 800.0
+    },
     teams: {
         Alpha: { 
-            pos: { x: 2, y: 2 }, 
+            pos: { x: 200.0, y: 200.0 }, 
             hp: 100, 
-            target: { x: 4, y: 4 },
+            target: { x: 400.0, y: 400.0 },
             power: { engines: 2, weapons: 2, shields: 2 }
         },
         Bravo: { 
-            pos: { x: 7, y: 7 }, 
+            pos: { x: 600.0, y: 600.0 }, 
             hp: 100, 
-            target: { x: 4, y: 4 },
+            target: { x: 400.0, y: 400.0 },
             power: { engines: 2, weapons: 2, shields: 2 }
         }
     }
@@ -82,24 +86,31 @@ io.on('connection', (socket) => {
             return;
         }
 
+        // Legacy discrete steps re-mapped to float vectors for boundary clamping
+        const stepSize = 50.0;
         let pos = gameState.teams[team].pos;
-        if (direction === 'N' && pos.y > 1) pos.y--;
-        if (direction === 'S' && pos.y < 8) pos.y++;
-        if (direction === 'E' && pos.x < 8) pos.x++;
-        if (direction === 'W' && pos.x > 1) pos.x--;
+        if (direction === 'N' && pos.y > stepSize) pos.y -= stepSize;
+        if (direction === 'S' && pos.y < (gameState.arena.height - stepSize)) pos.y += stepSize;
+        if (direction === 'E' && pos.x < (gameState.arena.width - stepSize)) pos.x += stepSize;
+        if (direction === 'W' && pos.x > stepSize) pos.x -= stepSize;
 
         io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
         
         const enemyTeam = team === 'Alpha' ? 'Bravo' : 'Alpha';
         const dist = calculateDistance(gameState.teams[team].pos, gameState.teams[enemyTeam].pos);
-        io.to(enemyTeam).emit('sonar_ping', { message: `Engine signatures detected. Distance: ${dist} sectors away.` });
+        io.to(enemyTeam).emit('sonar_ping', { message: `Engine signatures detected. Distance: ${dist} units away.` });
     });
 
     // CAPTAIN: Update Torpedo Coordinates Target
     socket.on('set_target', ({ x, y }) => {
         if (!gameState.active || socket.role !== 'Captain') return;
         const team = socket.team;
-        gameState.teams[team].target = { x: parseInt(x), y: parseInt(y) };
+
+        // Capture coordinates as floats and clamp inside arena boundaries
+        const targetX = Math.max(0.0, Math.min(parseFloat(x), gameState.arena.width));
+        const targetY = Math.max(0.0, Math.min(parseFloat(y), gameState.arena.height));
+
+        gameState.teams[team].target = { x: targetX, y: targetY };
         io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
     });
 
@@ -129,11 +140,11 @@ io.on('connection', (socket) => {
             
             gameState.teams[enemyTeam].hp -= mitigatedDamage;
             
-            io.to(team).emit('sonar_ping', { message: `💥 CONFIRMED HIT on target X:${target.x} Y:${target.y}! Penetrated armor for ${mitigatedDamage} damage.` });
-            io.to(enemyTeam).emit('sonar_ping', { message: `🚨 EMERGENCY! Direct hull strike at X:${target.x} Y:${target.y}! Defenses absorbed some impact. Took ${mitigatedDamage} damage.` });
+            io.to(team).emit('sonar_ping', { message: `💥 CONFIRMED HIT on target X:${target.x.toFixed(1)} Y:${target.y.toFixed(1)}! Penetrated armor for ${mitigatedDamage} damage.` });
+            io.to(enemyTeam).emit('sonar_ping', { message: `🚨 EMERGENCY! Direct hull strike at X:${target.x.toFixed(1)} Y:${target.y.toFixed(1)}! Defenses absorbed some impact. Took ${mitigatedDamage} damage.` });
         } else {
-            io.to(team).emit('sonar_ping', { message: `💦 Torpedo missed at vector X:${target.x} Y:${target.y}.` });
-            io.to(enemyTeam).emit('sonar_ping', { message: `Sonar reports splash down noise at vector X:${target.x} Y:${target.y}.` });
+            io.to(team).emit('sonar_ping', { message: `💦 Torpedo missed at vector X:${target.x.toFixed(1)} Y:${target.y.toFixed(1)}.` });
+            io.to(enemyTeam).emit('sonar_ping', { message: `Sonar reports splash down noise at vector X:${target.x.toFixed(1)} Y:${target.y.toFixed(1)}.` });
         }
 
         io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
@@ -157,9 +168,10 @@ io.on('connection', (socket) => {
     socket.on('reset_game', () => {
         gameState = {
             active: true,
+            arena: { width: 800.0, height: 800.0 },
             teams: {
-                Alpha: { pos: { x: 2, y: 2 }, hp: 100, target: { x: 4, y: 4 }, roster: [], power: { engines: 2, weapons: 2, shields: 2 } },
-                Bravo: { pos: { x: 7, y: 7 }, hp: 100, target: { x: 4, y: 4 }, roster: [], power: { engines: 2, weapons: 2, shields: 2 } }
+                Alpha: { pos: { x: 200.0, y: 200.0 }, hp: 100, target: { x: 400.0, y: 400.0 }, roster: [], power: { engines: 2, weapons: 2, shields: 2 } },
+                Bravo: { pos: { x: 600.0, y: 600.0 }, hp: 100, target: { x: 400.0, y: 400.0 }, roster: [], power: { engines: 2, weapons: 2, shields: 2 } }
             }
         };
         io.emit('game_over', { winner: 'SYSTEM RESET' }); 
@@ -168,3 +180,4 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Game engine running on port ${PORT}`));
+
