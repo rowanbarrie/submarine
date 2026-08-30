@@ -153,6 +153,9 @@
             document.getElementById('game-screen').classList.remove('hidden');
             document.getElementById('display-role').innerText = `${team} - ${role}`;
 
+            const panels = ['Captain', 'Sonar', 'Weapons', 'Engineer'];
+            panels.forEach(p => document.getElementById(`panel-${p}`).classList.add('hidden'));
+
             const specificPanel = document.getElementById(`panel-${role}`);
             if (specificPanel) specificPanel.classList.remove('hidden');
 
@@ -163,10 +166,13 @@
         function setupCanvasListeners() {
             const capCanvas = document.getElementById('captain-canvas');
             if (capCanvas) {
-                capCanvas.addEventListener('click', (e) => {
-                    const rect = capCanvas.getBoundingClientRect();
-                    const scaleX = capCanvas.width / rect.width;
-                    const scaleY = capCanvas.height / rect.height;
+                const newCapCanvas = capCanvas.cloneNode(true);
+                capCanvas.parentNode.replaceChild(newCapCanvas, capCanvas);
+                
+                newCapCanvas.addEventListener('click', (e) => {
+                    const rect = newCapCanvas.getBoundingClientRect();
+                    const scaleX = newCapCanvas.width / rect.width;
+                    const scaleY = newCapCanvas.height / rect.height;
                     const targetX = (e.clientX - rect.left) * scaleX;
                     const targetY = (e.clientY - rect.top) * scaleY;
                     socket.emit('set_target', { x: targetX, y: targetY });
@@ -175,10 +181,13 @@
 
             const sonCanvas = document.getElementById('sonar-canvas');
             if (sonCanvas) {
-                sonCanvas.addEventListener('click', (e) => {
-                    const rect = sonCanvas.getBoundingClientRect();
-                    const scaleX = sonCanvas.width / rect.width;
-                    const scaleY = sonCanvas.height / rect.height;
+                const newSonCanvas = sonCanvas.cloneNode(true);
+                sonCanvas.parentNode.replaceChild(newSonCanvas, sonCanvas);
+
+                newSonCanvas.addEventListener('click', (e) => {
+                    const rect = newSonCanvas.getBoundingClientRect();
+                    const scaleX = newSonCanvas.width / rect.width;
+                    const scaleY = newSonCanvas.height / rect.height;
                     const x = (e.clientX - rect.left) * scaleX;
                     const y = (e.clientY - rect.top) * scaleY;
                     
@@ -307,7 +316,7 @@
         function triggerReset() { if (confirm("Abort mission and reset game?")) socket.emit('reset_game'); }
 
         socket.on('state_update', (data) => {
-            if(!data.active) return;
+            if(!data.active || !currentRole) return;
             document.getElementById('display-hp').innerText = `${data.teamState.hp}%`;
             if (data.teamState) {
                 localState.pos = data.teamState.pos;
@@ -364,6 +373,7 @@
         });
 
         socket.on('sonar_ping', (data) => {
+            if (!currentRole) return;
             const sonarLogs = document.getElementById('sonar-logs');
             if (currentRole === 'Sonar' && sonarLogs) {
                 sonarLogs.innerHTML += `<div class="warn">⚠️ ${data.message}</div>`;
@@ -382,7 +392,20 @@
             }
         });
 
-        socket.on('game_over', (data) => { alert(data.winner === 'SYSTEM RESET' ? "🚨 RESET!" : `💥 Team ${data.winner} Wins!`); location.reload(); });
+        socket.on('game_over', (data) => { 
+            alert(data.winner === 'SYSTEM RESET' ? "🚨 MISSION ABORTED: SYSTEM RESET!" : `💥 CONGRATULATIONS! Team ${data.winner} Wins!`); 
+            
+            currentRole = '';
+            sonarPins = [];
+            activeRadarDistance = null;
+            
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('setup-screen').classList.remove('hidden');
+            
+            const sl = document.getElementById('sonar-logs'); if (sl) sl.innerHTML = '<div style="color: #6b7280;">[HYDROPHONES ONLINE]</div>';
+            const cl = document.getElementById('captain-sonar-logs'); if (cl) cl.innerHTML = '<div style="color: #6b7280;">[HYDROPHONE BRIDGE REPEATER ONLINE]</div>';
+        });
     </script>
 </body>
 </html>
+
