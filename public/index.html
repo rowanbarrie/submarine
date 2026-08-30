@@ -17,10 +17,7 @@
         button.fire-btn:hover { background: #b91c1c; }
         .hidden { display: none; }
         .header { display: flex; justify-content: space-between; border-bottom: 1px solid #047857; padding-bottom: 10px; margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 300px; margin: 0 auto; }
-        .grid button { margin: 0; padding: 20px 0; background: #161e2e; border: 1px solid #39ff14; color: #39ff14; font-weight: bold; }
-        .coords { display: flex; align-items: center; justify-content: center; font-size: 12px; border: 1px solid #374151; }
-        .logs { background: black; border: 1px solid #39ff14; padding: 10px; height: 200px; border-radius: 4px; overflow-y: auto; font-size: 12px; margin-bottom: 15px; }
+        .logs { background: black; border: 1px solid #39ff14; padding: 10px; height: 160px; border-radius: 4px; overflow-y: auto; font-size: 12px; margin-bottom: 15px; }
         .warn { color: #f59e0b; margin-bottom: 4px; }
 
         .power-grid { display: flex; flex-direction: column; gap: 15px; margin: 20px auto; max-width: 360px; }
@@ -34,20 +31,10 @@
         .power-val { font-size: 22px; font-weight: bold; width: 20px; text-align: center; color: white; }
         .sys-alert-banner { background: rgba(220, 38, 38, 0.2); border: 1px solid #ef4444; color: #ef4444; border-radius: 4px; padding: 8px; text-align: center; font-size: 11px; margin-bottom: 10px; font-weight: bold; }
 
-        .sonar-matrix { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; max-width: 360px; margin: 15px auto; background: #111827; padding: 8px; border: 1px solid #10b981; border-radius: 6px; }
-        .sonar-tile { aspect-ratio: 1; background: #1f293d; border: 1px solid #374151; color: #4b5563; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 2px; transition: all 0.2s ease; }
-        .sonar-tile:hover { border-color: #10b981; }
-        .sonar-tile.state-possible { background: rgba(5, 150, 105, 0.3); border-color: #39ff14; color: #39ff14; box-shadow: inset 0 0 8px rgba(57,255,20,0.4); }
-        .sonar-tile.state-splash { background: rgba(220, 38, 38, 0.3); border-color: #ef4444; color: #ef4444; box-shadow: inset 0 0 8px rgba(239,68,68,0.4); }
-        .sonar-tile.ring-highlight { border-color: #f59e0b; color: #f59e0b; background: rgba(245, 158, 11, 0.15); animation: radarPulse 1.5s infinite alternate; }
-        @keyframes radarPulse { from { box-shadow: inset 0 0 4px rgba(245,158,11,0.2); } to { box-shadow: inset 0 0 12px rgba(245,158,11,0.5); } }
-
-        .helm-matrix { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; max-width: 360px; margin: 15px auto; background: #111827; padding: 8px; border: 1px solid #f59e0b; border-radius: 6px; }
-        .helm-tile { aspect-ratio: 1; background: #1f293d; border: 1px solid #374151; color: #4b5563; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 2px; transition: all 0.2s ease; }
-        .helm-tile:hover { border-color: #f59e0b; }
-        .helm-tile.sub-here { background: rgba(59, 130, 246, 0.4); border-color: #3b82f6; color: #ffffff; box-shadow: 0 0 10px #3b82f6; }
-        .helm-tile.target-locked { background: rgba(220, 38, 38, 0.4); border-color: #ef4444; color: #ffffff; box-shadow: 0 0 10px #ef4444; }
-        .helm-tile.sub-here.target-locked { background: linear-gradient(45deg, #3b82f6, #ef4444); border-color: #f59e0b; }
+        .canvas-container { max-width: 360px; margin: 15px auto; background: #111827; border-radius: 6px; padding: 8px; box-sizing: border-box; }
+        .tactical-canvas { width: 100%; aspect-ratio: 1; background: #070a12; display: block; border-radius: 4px; cursor: crosshair; }
+        #captain-canvas { border: 1px solid #f59e0b; }
+        #sonar-canvas { border: 1px solid #10b981; }
     </style>
 </head>
 <body>
@@ -85,11 +72,13 @@
         <div id="panel-Captain" class="hidden">
             <div id="captain-power-alert" class="sys-alert-banner hidden">⚠️ ENGINE POWER CRITICAL: STEERING LOCKOUT</div>
             <p style="text-align: center; color: #f59e0b; margin-bottom: 5px;">NAV-CON HELM & TACTICAL MAP</p>
-            <div class="helm-matrix" id="captain-map-grid"></div>
-            <p style="text-align: center; color: #6b7280; font-size: 11px; margin: 0 0 15px 0;">🔵 Blue = Your Location | 🎯 Tap any tile to update Weapons Lock</p>
-            <div style="text-align: center; padding: 15px; border: 1px solid #374151; background: #111827; border-radius: 4px; margin-bottom: 20px;">
+            <div class="canvas-container">
+                <canvas id="captain-canvas" class="tactical-canvas" width="800" height="800"></canvas>
+            </div>
+            <p style="text-align: center; color: #6b7280; font-size: 11px; margin: 0 0 15px 0;">🔵 Blue Arrow = Your Position | 🎯 Click canvas to set targeting vector</p>
+            <div style="text-align: center; padding: 12px; border: 1px solid #374151; background: #111827; border-radius: 4px; margin-bottom: 15px;">
                 <div style="font-weight: bold; margin-bottom: 5px; color: white;">ACTIVE HELM VECTOR TELEMETRY</div>
-                <div class="coords" id="coords" style="border: none; font-size: 14px; margin-bottom: 5px;">X: 0.00 | Y: 0.00</div>
+                <div class="coords" id="coords" style="border: none; font-size: 14px; margin-bottom: 5px;">X: 0.0 | Y: 0.0</div>
                 <div id="helm-vector-status" style="font-size: 11px; color: #9ca3af;">Use WASD or Arrow Keys to steer • Spacebar to stop</div>
             </div>
             <div id="bridge-fire-control" class="hidden">
@@ -107,8 +96,11 @@
 
         <div id="panel-Sonar" class="hidden">
             <p style="text-align: center; color: #39ff14; margin-bottom: 5px;">PASSIVE SONAR RADAR FEED</p>
-            <div class="sonar-matrix" id="sonar-chart-grid"></div>
-            <p style="text-align: center; color: #6b7280; font-size: 11px; margin: 0 0 10px 0;">💡 Tap cells to cycle flags: Clear ➡️ 🟩 Possible ➡️ 🟥 Splashdown</p>
+            <div class="canvas-container">
+                <canvas id="sonar-canvas" class="tactical-canvas" width="800" height="800"></canvas>
+            </div>
+            <p style="text-align: center; color: #6b7280; font-size: 11px; margin: 0 0 10px 0;">💡 Click to drop pin markers: Click (🟩 Suspect) | Shift+Click (🟥 Splash)</p>
+            <button onclick="clearSonarPins()" style="padding: 6px; font-size: 12px; margin-bottom: 10px; background:#1f293d; border:1px solid #10b981; color:#10b981; font-weight:bold; cursor:pointer;">🧹 WIPE PIN METRIC ARCHIVE</button>
             <div class="logs" id="sonar-logs"><div style="color: #6b7280;">[HYDROPHONES ONLINE]</div></div>
         </div>
 
@@ -117,7 +109,7 @@
             <p style="text-align: center; color: #dc2626; margin-bottom: 15px;">TORPEDO BAY MANAGEMENT</p>
             <div style="background: #161e2e; border: 1px solid #4b5563; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
                 <span style="font-size: 12px; color: #9ca3af;">BRIDGE TARGET ACQUISITION:</span>
-                <div id="weapons-target-display" style="font-size: 24px; font-weight: bold; color: #f59e0b; text-align: center; margin: 10px 0;">X: 1 | Y: 1</div>
+                <div id="weapons-target-display" style="font-size: 24px; font-weight: bold; color: #f59e0b; text-align: center; margin: 10px 0;">X: 400.0 | Y: 400.0</div>
             </div>
             <button onclick="fireTorpedo()" class="fire-btn">💥 MATCH PAYLOAD & FIRE</button>
         </div>
@@ -147,7 +139,10 @@
     <script>
         const socket = io({ transports: ['websocket'] });
         let currentRole = '';
-        let ownPos = { x: 2, y: 2 };
+        let localState = { pos: { x: 200.0, y: 200.0 }, heading: 0.0, target: { x: 400.0, y: 400.0 } };
+        
+        let sonarPins = []; 
+        let activeRadarDistance = null;
 
         function joinGame() {
             const team = document.getElementById('team-select').value;
@@ -161,54 +156,128 @@
             const specificPanel = document.getElementById(`panel-${role}`);
             if (specificPanel) specificPanel.classList.remove('hidden');
 
-            if (role === 'Sonar') generateSonarGrid();
-            if (role === 'Captain') generateCaptainGrid();
-
+            setupCanvasListeners();
             socket.emit('join_game', { team, role });
         }
 
-        function generateSonarGrid() {
-            const gridContainer = document.getElementById('sonar-chart-grid');
-            if (!gridContainer) return;
-            gridContainer.innerHTML = '';
-            for (let y = 1; y <= 8; y++) {
-                for (let x = 1; x <= 8; x++) {
-                    const tile = document.createElement('div');
-                    tile.className = 'sonar-tile';
-                    tile.id = `sonar-tile-${x}-${y}`;
-                    tile.innerText = `${x},${y}`;
-                    tile.addEventListener('click', () => {
-                        if (!tile.classList.contains('state-possible') && !tile.classList.contains('state-splash')) {
-                            tile.classList.add('state-possible');
-                        } else if (tile.classList.contains('state-possible')) {
-                            tile.classList.remove('state-possible');
-                            tile.classList.add('state-splash');
-                        } else {
-                            tile.classList.remove('state-splash');
-                        }
-                    });
-                    gridContainer.appendChild(tile);
-                }
+        function setupCanvasListeners() {
+            const capCanvas = document.getElementById('captain-canvas');
+            if (capCanvas) {
+                capCanvas.addEventListener('click', (e) => {
+                    const rect = capCanvas.getBoundingClientRect();
+                    const scaleX = capCanvas.width / rect.width;
+                    const scaleY = capCanvas.height / rect.height;
+                    const targetX = (e.clientX - rect.left) * scaleX;
+                    const targetY = (e.clientY - rect.top) * scaleY;
+                    socket.emit('set_target', { x: targetX, y: targetY });
+                });
+            }
+
+            const sonCanvas = document.getElementById('sonar-canvas');
+            if (sonCanvas) {
+                sonCanvas.addEventListener('click', (e) => {
+                    const rect = sonCanvas.getBoundingClientRect();
+                    const scaleX = sonCanvas.width / rect.width;
+                    const scaleY = sonCanvas.height / rect.height;
+                    const x = (e.clientX - rect.left) * scaleX;
+                    const y = (e.clientY - rect.top) * scaleY;
+                    
+                    const type = e.shiftKey ? 'splash' : 'possible';
+                    sonarPins.push({ x, y, type });
+                    renderSonarWorkspace();
+                });
             }
         }
 
-        function clientCalculateDistance(p1, p2) {
-            return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
+        function clearSonarPins() {
+            sonarPins = [];
+            renderSonarWorkspace();
         }
 
-        function highlightDistanceRing(targetDistance) {
-            document.querySelectorAll('.sonar-tile').forEach(tile => tile.classList.remove('ring-highlight'));
-            for (let y = 1; y <= 8; y++) {
-                for (let x = 1; x <= 8; x++) {
-                    if (clientCalculateDistance(ownPos, { x, y }) === targetDistance) {
-                        const tileElement = document.getElementById(`sonar-tile-${x}-${y}`);
-                        if (tileElement) tileElement.classList.add('ring-highlight');
-                    }
-                }
+        function drawGridBackground(ctx, w, h, color) {
+            ctx.fillStyle = '#05070c';
+            ctx.fillRect(0, 0, w, h);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 0.5;
+            for (let i = 100; i < w; i += 100) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(w, i); ctx.stroke();
             }
         }
 
-        // Keyboard Vector Steering Loop
+        function renderCaptainWorkspace() {
+            const canvas = document.getElementById('captain-canvas');
+            if (!canvas || currentRole !== 'Captain') return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+
+            drawGridBackground(ctx, w, h, 'rgba(245, 158, 11, 0.15)');
+
+            if (localState.target) {
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(localState.target.x, localState.target.y, 15, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(localState.target.x - 25, localState.target.y); ctx.lineTo(localState.target.x + 25, localState.target.y); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(localState.target.x, localState.target.y - 25); ctx.lineTo(localState.target.x, localState.target.y + 25); ctx.stroke();
+            }
+
+            if (localState.pos) {
+                ctx.save();
+                ctx.translate(localState.pos.x, localState.pos.y);
+                ctx.rotate(localState.heading);
+                ctx.fillStyle = '#3b82f6';
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(20, 0);       
+                ctx.lineTo(-15, -12);    
+                ctx.lineTo(-8, 0);       
+                ctx.lineTo(-15, 12);     
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        function renderSonarWorkspace() {
+            const canvas = document.getElementById('sonar-canvas');
+            if (!canvas || currentRole !== 'Sonar') return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+
+            drawGridBackground(ctx, w, h, 'rgba(16, 185, 129, 0.12)');
+
+            if (localState.pos) {
+                ctx.fillStyle = '#3b82f6';
+                ctx.beginPath();
+                ctx.arc(localState.pos.x, localState.pos.y, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+
+                if (activeRadarDistance) {
+                    ctx.strokeStyle = '#f59e0b';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(localState.pos.x, localState.pos.y, activeRadarDistance, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+
+            sonarPins.forEach(pin => {
+                ctx.fillStyle = pin.type === 'possible' ? '#39ff14' : '#ef4444';
+                ctx.shadowColor = ctx.fillStyle;
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.arc(pin.x, pin.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+        }
+
         const pressedKeys = {};
         window.addEventListener('keydown', (e) => { if (currentRole === 'Captain') pressedKeys[e.key.toLowerCase()] = true; });
         window.addEventListener('keyup', (e) => { if (currentRole === 'Captain') pressedKeys[e.key.toLowerCase()] = false; });
@@ -232,30 +301,19 @@
                 socket.emit('steer_sub', { heading: heading, speed: 120.0 });
             }
         }, 100);
+
         function fireTorpedo() { socket.emit('fire_torpedo'); }
         function adjustPower(system, change) { socket.emit('update_power', { system, change: parseInt(change, 10) }); }
         function triggerReset() { if (confirm("Abort mission and reset game?")) socket.emit('reset_game'); }
 
-        function generateCaptainGrid() {
-            const gridContainer = document.getElementById('captain-map-grid');
-            if (!gridContainer) return;
-            gridContainer.innerHTML = '';
-            for (let y = 1; y <= 8; y++) {
-                for (let x = 1; x <= 8; x++) {
-                    const tile = document.createElement('div');
-                    tile.className = 'helm-tile';
-                    tile.id = `helm-tile-${x}-${y}`;
-                    tile.innerText = `${x},${y}`;
-                    tile.addEventListener('click', () => socket.emit('set_target', { x: parseFloat(x), y: parseFloat(y) }));
-                    gridContainer.appendChild(tile);
-                }
-            }
-        }
-
         socket.on('state_update', (data) => {
             if(!data.active) return;
             document.getElementById('display-hp').innerText = `${data.teamState.hp}%`;
-            if (data.teamState.pos) ownPos = data.teamState.pos;
+            if (data.teamState) {
+                localState.pos = data.teamState.pos;
+                localState.heading = data.teamState.heading;
+                localState.target = data.teamState.target;
+            }
 
             if (data.teamState.power) {
                 const power = data.teamState.power;
@@ -292,20 +350,16 @@
             }
 
             if (currentRole === 'Captain') {
-                if (data.teamState.pos) document.getElementById('coords').innerText = `X: ${data.teamState.pos.x.toFixed(1)} | Y: ${data.teamState.pos.y.toFixed(1)}`;
-                document.querySelectorAll('.helm-tile').forEach(tile => tile.classList.remove('sub-here', 'target-locked'));
-                if (data.teamState.pos) {
-                    const subTile = document.getElementById(`helm-tile-${data.teamState.pos.x}-${data.teamState.pos.y}`);
-                    if (subTile) subTile.classList.add('sub-here');
-                }
-                if (data.teamState.target) {
-                    const targetTile = document.getElementById(`helm-tile-${data.teamState.target.x}-${data.teamState.target.y}`);
-                    if (targetTile) targetTile.classList.add('target-locked');
-                }
+                if (localState.pos) document.getElementById('coords').innerText = `X: ${localState.pos.x.toFixed(1)} | Y: ${localState.pos.y.toFixed(1)}`;
+                renderCaptainWorkspace();
             }
 
-            if (currentRole === 'Weapons' && data.teamState.target) {
-                document.getElementById('weapons-target-display').innerText = `X: ${data.teamState.target.x} | Y: ${data.teamState.target.y}`;
+            if (currentRole === 'Sonar') {
+                renderSonarWorkspace();
+            }
+
+            if (currentRole === 'Weapons' && localState.target) {
+                document.getElementById('weapons-target-display').innerText = `X: ${localState.target.x.toFixed(1)} | Y: ${localState.target.y.toFixed(1)}`;
             }
         });
 
@@ -314,8 +368,12 @@
             if (currentRole === 'Sonar' && sonarLogs) {
                 sonarLogs.innerHTML += `<div class="warn">⚠️ ${data.message}</div>`;
                 sonarLogs.scrollTop = sonarLogs.scrollHeight;
-                const distanceMatch = data.message.match(/Distance:\s*(\d+)/);
-                if (distanceMatch) highlightDistanceRing(parseInt(distanceMatch, 10));
+                
+                const distanceMatch = data.message.match(/Distance:\s*([\d.]+)/);
+                if (distanceMatch) {
+                    activeRadarDistance = parseFloat(distanceMatch[1]);
+                    renderSonarWorkspace();
+                }
             }
             const captainLogs = document.getElementById('captain-sonar-logs');
             if (currentRole === 'Captain' && captainLogs) {
