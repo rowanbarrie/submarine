@@ -20,12 +20,16 @@ let gameState = {
         Alpha: { 
             pos: { x: 200.0, y: 200.0 }, 
             hp: 100, 
+            speed: 0.0,
+            heading: 0.0, // Radians
             target: { x: 400.0, y: 400.0 },
             power: { engines: 2, weapons: 2, shields: 2 }
         },
         Bravo: { 
             pos: { x: 600.0, y: 600.0 }, 
             hp: 100, 
+            speed: 0.0,
+            heading: 0.0, // Radians
             target: { x: 400.0, y: 400.0 },
             power: { engines: 2, weapons: 2, shields: 2 }
         }
@@ -35,6 +39,46 @@ let gameState = {
 function calculateDistance(pos1, pos2) {
     return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y);
 }
+
+// --- 30Hz Physics Engine Loop ---
+let lastUpdateTime = Date.now();
+setInterval(() => {
+    if (!gameState.active) return;
+
+    const now = Date.now();
+    const dt = (now - lastUpdateTime) / 1000.0; // Delta time in seconds
+    lastUpdateTime = now;
+
+    let stateChanged = false;
+
+    for (const teamId of Object.keys(gameState.teams)) {
+        const team = gameState.teams[teamId];
+        
+        // Enforce engine minimum thresholds. Submarines stall under 2 power.
+        if (team.power.engines >= 2 && team.speed > 0) {
+            // Calculate base top speed scaled by engineering engine cells
+            // 2 units = 60 units/s, 3 units = 90 units/s, 4 units = 120 units/s
+            const maxSpeedCap = team.power.engines * 30.0; 
+            const absoluteSpeed = Math.min(team.speed, maxSpeedCap);
+
+            // Vector kinematics mapping
+            team.pos.x += Math.cos(team.heading) * absoluteSpeed * dt;
+            team.pos.y += Math.sin(team.heading) * absoluteSpeed * dt;
+
+            // Bound constraints clamping
+            team.pos.x = Math.max(0.0, Math.min(team.pos.x, gameState.arena.width));
+            team.pos.y = Math.max(0.0, Math.min(team.pos.y, gameState.arena.height));
+            stateChanged = true;
+        }
+    }
+
+    if (stateChanged) {
+        // Broadcast updated spatial locations to respective rooms safely
+        for (const teamId of Object.keys(gameState.teams)) {
+            io.to(teamId).emit('state_update', { teamState: gameState.teams[teamId], active: gameState.active });
+        }
+    }
+}, 1000 / 30);
 
 io.on('connection', (socket) => {
     socket.on('join_game', ({ team, role }) => {
@@ -76,29 +120,29 @@ io.on('connection', (socket) => {
         io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
     });
 
-    // CAPTAIN: Move Sub (Enforces Engine Power Rules)
-    socket.on('move_sub', (direction) => {
+    // CAPTAIN: Process continuous steering inputs (Throttled vectors)
+    // Expects payload structure: { heading: Float(Radians), speed: Float }
+    socket.on('steer_sub', ({ heading, speed }) => {
         if (!gameState.active || socket.role !== 'Captain') return;
         const team = socket.team;
         
         if (gameState.teams[team].power.engines < 2) {
+            gameState.teams[team].speed = 0;
             socket.emit('sonar_ping', { message: "🛑 HELM STALLED: Critical engine failure. Chief Engineer must allocate at least 2 Power Units to Engines!" });
             return;
         }
 
-        // Legacy discrete steps re-mapped to float vectors for boundary clamping
-        const stepSize = 50.0;
-        let pos = gameState.teams[team].pos;
-        if (direction === 'N' && pos.y > stepSize) pos.y -= stepSize;
-        if (direction === 'S' && pos.y < (gameState.arena.height - stepSize)) pos.y += stepSize;
-        if (direction === 'E' && pos.x < (gameState.arena.width - stepSize)) pos.x += stepSize;
-        if (direction === 'W' && pos.x > stepSize) pos.x -= stepSize;
+        if (heading !== undefined) gameState.teams[team].heading = parseFloat(heading);
+        if (speed !== undefined) {
+            const maxSpeedCap = gameState.teams[team].power.engines * 30.0;
+            gameState.teams[team].speed = Math.min(parseFloat(speed), maxSpeedCap);
+        }
 
         io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
         
         const enemyTeam = team === 'Alpha' ? 'Bravo' : 'Alpha';
         const dist = calculateDistance(gameState.teams[team].pos, gameState.teams[enemyTeam].pos);
-        io.to(enemyTeam).emit('sonar_ping', { message: `Engine signatures detected. Distance: ${dist} units away.` });
+        io.to(enemyTeam).emit('sonar_ping', { message: `Engine signatures detected. Distance: ${dist.toFixed(1)} units away.` });
     });
 
     // CAPTAIN: Update Torpedo Coordinates Target
@@ -170,8 +214,8 @@ io.on('connection', (socket) => {
             active: true,
             arena: { width: 800.0, height: 800.0 },
             teams: {
-                Alpha: { pos: { x: 200.0, y: 200.0 }, hp: 100, target: { x: 400.0, y: 400.0 }, roster: [], power: { engines: 2, weapons: 2, shields: 2 } },
-                Bravo: { pos: { x: 600.0, y: 600.0 }, hp: 100, target: { x: 400.0, y: 400.0 }, roster: [], power: { engines: 2, weapons: 2, shields: 2 } }
+                Alpha: { pos: { x: 200.0, y: 200.0 }, hp: 100, speed: 0.0, heading: 0.0, target: { x: 400.0, y: 400.0 }, roster: [], power: { engines: 2, weapons: 2, shields: 2 } },
+                Bravo: { pos: { x: 600.0, y: 600.0 }, hp: 100, speed: 0.0, heading: 0.0, target: { x: 400.0, y: 400.0 }, roster: [], power: { engines: 2, weapons: 2, shields: 2 } }
             }
         };
         io.emit('game_over', { winner: 'SYSTEM RESET' }); 
@@ -180,4 +224,3 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Game engine running on port ${PORT}`));
-
