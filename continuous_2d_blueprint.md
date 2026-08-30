@@ -41,6 +41,7 @@ This blueprint outlines a high-level roadmap to smoothly transition **Silent Dep
 * Swap out the server-side `calculateDistance` Manhattan equation (|x₁ - x₂| + |y₁ - y₂|) for the Euclidean distance formula:
   d = √((x₂ - x₁)² + (y₂ - y₁)²)
 * Configure the server loop to evaluate distance changes at periodic intervals, transmitting continuous proximity alerts to the opposing sub's hydrophones.
+* **Telemetry Suppression Filter:** Maintain a historical log of emitted distance signatures per team. If a vessel becomes stuck running into an arena wall boundary, suppress redundant network socket packet spam to the opponent's logs.
 
 ### 2. Dynamic Torpedo Blast Radius
 * Convert the direct coordinate match checker (`target.x === enemyPos.x`) inside `fire_torpedo` to a circle-to-point spatial distance test.
@@ -67,8 +68,8 @@ This blueprint outlines a high-level roadmap to smoothly transition **Silent Dep
 ## 🔮 Strategic Prompt Ordering (For AI Chat Sessions)
 To prevent your AI tool from losing context, copy and paste each item below as a **standalone prompt** in a brand-new chat session, moving down the list only after the previous step is finished:
 
-1. "Using Express 5.x and Socket.io 4.x, migrate the server-side coordinate structures from an 8x8 board layout to an 800x800 coordinate system with floating-point vectors."
-2. "Implement a 30Hz server-side update loop using setInterval to smoothly move sub coordinates based on speed, heading angles, and engine allocations."
-3. "Convert the user-facing movement inputs on the client from discrete button triggers to keyboard listeners and directional steering event emitters."
-4. "Refactor the server's tracking and combat logic to calculate standard Euclidean distances instead of Manhattan distances, and implement circle-based torpedo blast checks."
+1. "Using Express 5.x and Socket.io 4.x, migrate the server-side coordinate structures from an 8x8 board layout to an 800x800 coordinate system with floating-point vectors." (Completed)
+2. "Implement a 30Hz server-side update loop using setInterval to smoothly move sub coordinates based on speed, heading angles, and engine allocations." (Completed)
+3. "Convert the user-facing movement inputs on the client from discrete button triggers to keyboard listeners and directional steering event emitters." (Completed)
+4. "Refactor the server's tracking and combat logic to calculate standard Euclidean distances instead of Manhattan distances, implement circle-based torpedo blast checks, and suppress wall-grinding ping flood loops." (Completed)
 5. "Re-engineer the frontend HTML UI, swapping out the grid matrix blocks for highly performant, lightweight HTML5 Canvas elements."

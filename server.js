@@ -37,7 +37,7 @@ let gameState = {
 };
 
 function calculateDistance(pos1, pos2) {
-    return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y);
+    return Math.sqrt(Math.pow(pos2.x - pos1.x, 2) + Math.pow(pos2.y - pos1.y, 2));
 }
 
 // --- 30Hz Physics Engine Loop ---
@@ -142,7 +142,12 @@ io.on('connection', (socket) => {
         
         const enemyTeam = team === 'Alpha' ? 'Bravo' : 'Alpha';
         const dist = calculateDistance(gameState.teams[team].pos, gameState.teams[enemyTeam].pos);
-        io.to(enemyTeam).emit('sonar_ping', { message: `Engine signatures detected. Distance: ${dist.toFixed(1)} units away.` });
+        if (!gameState.teams[team].lastEmittedDist || Math.abs(gameState.teams[team].lastEmittedDist - dist) > 0.1) {
+            if (gameState.teams[team].speed > 0) {
+                io.to(enemyTeam).emit('sonar_ping', { message: `Engine signatures detected. Distance: ${dist.toFixed(1)} units away.` });
+                gameState.teams[team].lastEmittedDist = dist;
+            }
+        }
     });
 
     // CAPTAIN: Update Torpedo Coordinates Target
@@ -177,8 +182,10 @@ io.on('connection', (socket) => {
         const enemyTeam = team === 'Alpha' ? 'Bravo' : 'Alpha';
         const target = gameState.teams[team].target;
         const enemyPos = gameState.teams[enemyTeam].pos;
+        const torpedoDistance = calculateDistance(target, enemyPos);
+        const BLAST_RADIUS = 50.0;
 
-        if (target.x === enemyPos.x && target.y === enemyPos.y) {
+        if (torpedoDistance <= BLAST_RADIUS) {
             const enemyShields = gameState.teams[enemyTeam].power.shields;
             const mitigatedDamage = Math.max(0, 50 - (enemyShields * 10));
             
