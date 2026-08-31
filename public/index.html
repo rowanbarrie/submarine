@@ -36,6 +36,12 @@
         #captain-canvas { border: 1px solid #f59e0b; }
         #sonar-canvas { border: 1px solid #10b981; }
 
+        /* Engineering Reactor Minigame Workspace UI */
+        .engineer-minigame-box { background: #111827; border: 1px solid #a855f7; border-radius: 6px; padding: 12px; margin-top: 15px; text-align: center; }
+        .thermal-display { font-size: 20px; font-weight: bold; margin: 5px 0; font-family: monospace; transition: color 0.2s; }
+        .gauge-canvas-container { width: 100%; max-width: 200px; margin: 10px auto; aspect-ratio: 2; }
+        #eng-gauge-canvas { width: 100%; height: 100%; background: transparent; display: block; }
+
         /* Timed Calibration Slider UI Elements */
         .calibration-box { background: #111827; border: 1px solid #dc2626; padding: 12px; border-radius: 6px; margin: 15px 0; text-align: center; }
         .slider-track { height: 24px; background: #1f293d; position: relative; border-radius: 4px; overflow: hidden; border: 1px solid #4b5563; margin: 10px 0; }
@@ -139,6 +145,30 @@
             <div class="power-grid">
                 <div class="power-row">
                     <div class="power-meta"><div class="power-title">⚙️ Propulsion Engines</div><div class="power-status" id="engine-subtext">Needs ≥ 2 units to steer</div></div>
+
+            <!-- Interlocking Engineering Minigame Component -->
+            <div class="engineer-minigame-box">
+                <div style="font-size: 12px; font-weight: bold; color: #a855f7;">🔥 REACTOR CORE TEMPERATURE</div>
+                <div id="eng-thermal-text" class="thermal-display">0.0°C</div>
+                <div class="gauge-canvas-container">
+                    <canvas id="eng-gauge-canvas" width="400" height="200"></canvas>
+                </div>
+                <div id="eng-calibration-module" style="margin-top: 10px;">
+                    <div style="font-size: 11px; color: #9ca3af; margin-bottom: 8px;">Synchronize alignment cursor to purge thermal buildup</div>
+                    <div class="slider-track" style="border-color: #a855f7;">
+                        <div id="eng-target" class="target-zone" style="left: 45%; width: 10%; background: #a855f7; box-shadow: 0 0 10px #a855f7;"></div>
+                        <div id="eng-pin" class="slider-pin" style="left: 0%; background: #ffffff;"></div>
+                    </div>
+                    <button onclick="attemptEngineeringPurge()" class="action-btn" style="background: #a855f7; margin: 0; padding: 6px; font-size: 12px;">💨 TRIGGER REACTOR FLUSH</button>
+                </div>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <p style="text-align: center; color: #a855f7; margin-bottom: 5px; font-size: 14px;">ENGINEERING CONTROL AUDIO REPEATER</p>
+                <div class="logs" id="engineer-logs" style="height: 100px; border-color: #a855f7;">
+                    <div style="color: #6b7280;">[REACTOR TELEMETRY STREAM COMPLIANT]</div>
+                </div>
+            </div>
                     <div class="power-controls"><button class="power-btn" onclick="adjustPower('engines', -1)">-</button><div class="power-val" id="val-engines">2</div><button class="power-btn" onclick="adjustPower('engines', 1)">+</button></div>
                 </div>
                 <div class="power-row">
@@ -173,6 +203,12 @@
         let activeRadarDistance = null;
 
         // Calibration minigame variables
+        // Engineering Minigame Alignment Logic (Task 2.4)
+        let engSliderPosition = 0;
+        let engSliderDirection = 1;
+        let engTargetMin = 45;
+        let engTargetMax = 55;
+        let engSliderInterval = null;
         let currentCalToken = null;
         let sliderPosition = 0;
         let sliderDirection = 1;
@@ -196,6 +232,13 @@
             if (specificPanel) specificPanel.classList.remove('hidden');
 
             setupCanvasListeners();
+            if (role === 'Engineer') {
+                startEngineeringSliderLoop();
+                renderEngineeringGaugeLoop();
+            } else {
+                stopEngineeringLoops();
+            }
+
             socket.emit('join_game', { team, role });
         }
 
@@ -236,6 +279,7 @@
 
         function startCalibrationLoop() {
             if (sliderInterval) clearInterval(sliderInterval);
+            stopEngineeringLoops();
             
             // Randomize sweet spot area locations to defeat static automated bot macros
             targetMin = Math.floor(Math.random() * 55) + 10;
@@ -258,17 +302,1057 @@
         }
 
         function attemptCalibration() {
-            if (sliderPosition >= targetMin && sliderPosition <= targetMax) {
-                clearInterval(sliderInterval);
-                document.getElementById('cal-status-label').innerText = "⚡ CALIBRATION SECURED • STANDBY";
-                document.getElementById('cal-status-label').style.color = "#059669";
-                socket.emit('submit_calibration', { token: currentCalToken });
-            } else {
-                // Flash fault indicator and restart tracking loop metrics
-                document.getElementById('cal-status-label').innerText = "❌ FAULT DETECTED: ALIGNMENT RE-INDEXING";
-                document.getElementById('cal-status-label').style.color = "#ef4444";
-                startCalibrationLoop();
+
+        // --- Task 2.4 Frontend Loops for Chief Engineer Minigame Module ---
+        function startEngineeringSliderLoop() {
+            if (engSliderInterval) clearInterval(engSliderInterval);
+            engTargetMin = Math.floor(Math.random() * 65) + 10;
+            engTargetMax = engTargetMin + 12;
+            const engTargetEl = document.getElementById('eng-target');
+            if (engTargetEl) {
+                engTargetEl.style.left = `${engTargetMin}%`;
+                engTargetEl.style.width = `${engTargetMax - engTargetMin}%`;
             }
+            engSliderInterval = setInterval(() => {
+                engSliderPosition += engSliderDirection * 4.0;
+                if (engSliderPosition >= 100) { engSliderPosition = 100; engSliderDirection = -1; }
+                if (engSliderPosition <= 0) { engSliderPosition = 0; engSliderDirection = 1; }
+                const engPinEl = document.getElementById('eng-pin');
+                if (engPinEl) engPinEl.style.left = `${engSliderPosition}%`;
+            }, 30);
+        }
+
+        function attemptEngineeringPurge() {
+            if (currentRole !== 'Engineer') return;
+            if (engSliderPosition >= engTargetMin && engSliderPosition <= engTargetMax) {
+                socket.emit('submit_engineering_balance', { success: true });
+                startEngineeringSliderLoop();
+            } else {
+                socket.emit('submit_engineering_balance', { success: false });
+            }
+        }
+
+        function renderEngineeringGaugeLoop() {
+            if (currentRole !== 'Engineer') return;
+            const canvas = document.getElementById('eng-gauge-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            const cx = w / 2, cy = h - 10, r = 160;
+            ctx.strokeStyle = '#1f293d';
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+            ctx.stroke();
+            const heatVal = localState.thermalLoad || 0.0;
+            let gaugeColor = '#a855f7';
+            if (heatVal > 40.0) gaugeColor = '#f59e0b';
+            if (heatVal > 75.0) gaugeColor = '#ef4444';
+            const heatPercent = Math.min(100.0, heatVal) / 100.0;
+            const endAngle = Math.PI + (Math.PI * heatPercent);
+            if (heatPercent > 0) {
+                ctx.strokeStyle = gaugeColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, Math.PI, endAngle);
+                ctx.stroke();
+            }
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(endAngle - 2 * Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(r - 15, 0);
+            ctx.lineTo(0, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            ctx.fillStyle = '#1f293d';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 15, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            requestAnimationFrame(renderEngineeringGaugeLoop);
+        }
+
+        function stopEngineeringLoops() {
+            if (engSliderInterval) { clearInterval(engSliderInterval); engSliderInterval = null; }
+        }
+            if (sliderPosition >= targetMin && sliderPosition <= targetMax) {
+
+        // --- Task 2.4 Frontend Loops for Chief Engineer Minigame Module ---
+        function startEngineeringSliderLoop() {
+            if (engSliderInterval) clearInterval(engSliderInterval);
+            engTargetMin = Math.floor(Math.random() * 65) + 10;
+            engTargetMax = engTargetMin + 12;
+            const engTargetEl = document.getElementById('eng-target');
+            if (engTargetEl) {
+                engTargetEl.style.left = `${engTargetMin}%`;
+                engTargetEl.style.width = `${engTargetMax - engTargetMin}%`;
+            }
+            engSliderInterval = setInterval(() => {
+                engSliderPosition += engSliderDirection * 4.0;
+                if (engSliderPosition >= 100) { engSliderPosition = 100; engSliderDirection = -1; }
+                if (engSliderPosition <= 0) { engSliderPosition = 0; engSliderDirection = 1; }
+                const engPinEl = document.getElementById('eng-pin');
+                if (engPinEl) engPinEl.style.left = `${engSliderPosition}%`;
+            }, 30);
+        }
+
+        function attemptEngineeringPurge() {
+            if (currentRole !== 'Engineer') return;
+            if (engSliderPosition >= engTargetMin && engSliderPosition <= engTargetMax) {
+                socket.emit('submit_engineering_balance', { success: true });
+                startEngineeringSliderLoop();
+            } else {
+                socket.emit('submit_engineering_balance', { success: false });
+            }
+        }
+
+        function renderEngineeringGaugeLoop() {
+            if (currentRole !== 'Engineer') return;
+            const canvas = document.getElementById('eng-gauge-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            const cx = w / 2, cy = h - 10, r = 160;
+            ctx.strokeStyle = '#1f293d';
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+            ctx.stroke();
+            const heatVal = localState.thermalLoad || 0.0;
+            let gaugeColor = '#a855f7';
+            if (heatVal > 40.0) gaugeColor = '#f59e0b';
+            if (heatVal > 75.0) gaugeColor = '#ef4444';
+            const heatPercent = Math.min(100.0, heatVal) / 100.0;
+            const endAngle = Math.PI + (Math.PI * heatPercent);
+            if (heatPercent > 0) {
+                ctx.strokeStyle = gaugeColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, Math.PI, endAngle);
+                ctx.stroke();
+            }
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(endAngle - 2 * Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(r - 15, 0);
+            ctx.lineTo(0, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            ctx.fillStyle = '#1f293d';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 15, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            requestAnimationFrame(renderEngineeringGaugeLoop);
+        }
+
+        function stopEngineeringLoops() {
+            if (engSliderInterval) { clearInterval(engSliderInterval); engSliderInterval = null; }
+        }
+                clearInterval(sliderInterval);
+
+        // --- Task 2.4 Frontend Loops for Chief Engineer Minigame Module ---
+        function startEngineeringSliderLoop() {
+            if (engSliderInterval) clearInterval(engSliderInterval);
+            engTargetMin = Math.floor(Math.random() * 65) + 10;
+            engTargetMax = engTargetMin + 12;
+            const engTargetEl = document.getElementById('eng-target');
+            if (engTargetEl) {
+                engTargetEl.style.left = `${engTargetMin}%`;
+                engTargetEl.style.width = `${engTargetMax - engTargetMin}%`;
+            }
+            engSliderInterval = setInterval(() => {
+                engSliderPosition += engSliderDirection * 4.0;
+                if (engSliderPosition >= 100) { engSliderPosition = 100; engSliderDirection = -1; }
+                if (engSliderPosition <= 0) { engSliderPosition = 0; engSliderDirection = 1; }
+                const engPinEl = document.getElementById('eng-pin');
+                if (engPinEl) engPinEl.style.left = `${engSliderPosition}%`;
+            }, 30);
+        }
+
+        function attemptEngineeringPurge() {
+            if (currentRole !== 'Engineer') return;
+            if (engSliderPosition >= engTargetMin && engSliderPosition <= engTargetMax) {
+                socket.emit('submit_engineering_balance', { success: true });
+                startEngineeringSliderLoop();
+            } else {
+                socket.emit('submit_engineering_balance', { success: false });
+            }
+        }
+
+        function renderEngineeringGaugeLoop() {
+            if (currentRole !== 'Engineer') return;
+            const canvas = document.getElementById('eng-gauge-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            const cx = w / 2, cy = h - 10, r = 160;
+            ctx.strokeStyle = '#1f293d';
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+            ctx.stroke();
+            const heatVal = localState.thermalLoad || 0.0;
+            let gaugeColor = '#a855f7';
+            if (heatVal > 40.0) gaugeColor = '#f59e0b';
+            if (heatVal > 75.0) gaugeColor = '#ef4444';
+            const heatPercent = Math.min(100.0, heatVal) / 100.0;
+            const endAngle = Math.PI + (Math.PI * heatPercent);
+            if (heatPercent > 0) {
+                ctx.strokeStyle = gaugeColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, Math.PI, endAngle);
+                ctx.stroke();
+            }
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(endAngle - 2 * Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(r - 15, 0);
+            ctx.lineTo(0, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            ctx.fillStyle = '#1f293d';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 15, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            requestAnimationFrame(renderEngineeringGaugeLoop);
+        }
+
+        function stopEngineeringLoops() {
+            if (engSliderInterval) { clearInterval(engSliderInterval); engSliderInterval = null; }
+        }
+                document.getElementById('cal-status-label').innerText = "⚡ CALIBRATION SECURED • STANDBY";
+
+        // --- Task 2.4 Frontend Loops for Chief Engineer Minigame Module ---
+        function startEngineeringSliderLoop() {
+            if (engSliderInterval) clearInterval(engSliderInterval);
+            engTargetMin = Math.floor(Math.random() * 65) + 10;
+            engTargetMax = engTargetMin + 12;
+            const engTargetEl = document.getElementById('eng-target');
+            if (engTargetEl) {
+                engTargetEl.style.left = `${engTargetMin}%`;
+                engTargetEl.style.width = `${engTargetMax - engTargetMin}%`;
+            }
+            engSliderInterval = setInterval(() => {
+                engSliderPosition += engSliderDirection * 4.0;
+                if (engSliderPosition >= 100) { engSliderPosition = 100; engSliderDirection = -1; }
+                if (engSliderPosition <= 0) { engSliderPosition = 0; engSliderDirection = 1; }
+                const engPinEl = document.getElementById('eng-pin');
+                if (engPinEl) engPinEl.style.left = `${engSliderPosition}%`;
+            }, 30);
+        }
+
+        function attemptEngineeringPurge() {
+            if (currentRole !== 'Engineer') return;
+            if (engSliderPosition >= engTargetMin && engSliderPosition <= engTargetMax) {
+                socket.emit('submit_engineering_balance', { success: true });
+                startEngineeringSliderLoop();
+            } else {
+                socket.emit('submit_engineering_balance', { success: false });
+            }
+        }
+
+        function renderEngineeringGaugeLoop() {
+            if (currentRole !== 'Engineer') return;
+            const canvas = document.getElementById('eng-gauge-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            const cx = w / 2, cy = h - 10, r = 160;
+            ctx.strokeStyle = '#1f293d';
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+            ctx.stroke();
+            const heatVal = localState.thermalLoad || 0.0;
+            let gaugeColor = '#a855f7';
+            if (heatVal > 40.0) gaugeColor = '#f59e0b';
+            if (heatVal > 75.0) gaugeColor = '#ef4444';
+            const heatPercent = Math.min(100.0, heatVal) / 100.0;
+            const endAngle = Math.PI + (Math.PI * heatPercent);
+            if (heatPercent > 0) {
+                ctx.strokeStyle = gaugeColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, Math.PI, endAngle);
+                ctx.stroke();
+            }
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(endAngle - 2 * Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(r - 15, 0);
+            ctx.lineTo(0, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            ctx.fillStyle = '#1f293d';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 15, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            requestAnimationFrame(renderEngineeringGaugeLoop);
+        }
+
+        function stopEngineeringLoops() {
+            if (engSliderInterval) { clearInterval(engSliderInterval); engSliderInterval = null; }
+        }
+                document.getElementById('cal-status-label').style.color = "#059669";
+
+        // --- Task 2.4 Frontend Loops for Chief Engineer Minigame Module ---
+        function startEngineeringSliderLoop() {
+            if (engSliderInterval) clearInterval(engSliderInterval);
+            engTargetMin = Math.floor(Math.random() * 65) + 10;
+            engTargetMax = engTargetMin + 12;
+            const engTargetEl = document.getElementById('eng-target');
+            if (engTargetEl) {
+                engTargetEl.style.left = `${engTargetMin}%`;
+                engTargetEl.style.width = `${engTargetMax - engTargetMin}%`;
+            }
+            engSliderInterval = setInterval(() => {
+                engSliderPosition += engSliderDirection * 4.0;
+                if (engSliderPosition >= 100) { engSliderPosition = 100; engSliderDirection = -1; }
+                if (engSliderPosition <= 0) { engSliderPosition = 0; engSliderDirection = 1; }
+                const engPinEl = document.getElementById('eng-pin');
+                if (engPinEl) engPinEl.style.left = `${engSliderPosition}%`;
+            }, 30);
+        }
+
+        function attemptEngineeringPurge() {
+            if (currentRole !== 'Engineer') return;
+            if (engSliderPosition >= engTargetMin && engSliderPosition <= engTargetMax) {
+                socket.emit('submit_engineering_balance', { success: true });
+                startEngineeringSliderLoop();
+            } else {
+                socket.emit('submit_engineering_balance', { success: false });
+            }
+        }
+
+        function renderEngineeringGaugeLoop() {
+            if (currentRole !== 'Engineer') return;
+            const canvas = document.getElementById('eng-gauge-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            const cx = w / 2, cy = h - 10, r = 160;
+            ctx.strokeStyle = '#1f293d';
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+            ctx.stroke();
+            const heatVal = localState.thermalLoad || 0.0;
+            let gaugeColor = '#a855f7';
+            if (heatVal > 40.0) gaugeColor = '#f59e0b';
+            if (heatVal > 75.0) gaugeColor = '#ef4444';
+            const heatPercent = Math.min(100.0, heatVal) / 100.0;
+            const endAngle = Math.PI + (Math.PI * heatPercent);
+            if (heatPercent > 0) {
+                ctx.strokeStyle = gaugeColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, Math.PI, endAngle);
+                ctx.stroke();
+            }
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(endAngle - 2 * Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(r - 15, 0);
+            ctx.lineTo(0, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            ctx.fillStyle = '#1f293d';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 15, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            requestAnimationFrame(renderEngineeringGaugeLoop);
+        }
+
+        function stopEngineeringLoops() {
+            if (engSliderInterval) { clearInterval(engSliderInterval); engSliderInterval = null; }
+        }
+                socket.emit('submit_calibration', { token: currentCalToken });
+
+        // --- Task 2.4 Frontend Loops for Chief Engineer Minigame Module ---
+        function startEngineeringSliderLoop() {
+            if (engSliderInterval) clearInterval(engSliderInterval);
+            engTargetMin = Math.floor(Math.random() * 65) + 10;
+            engTargetMax = engTargetMin + 12;
+            const engTargetEl = document.getElementById('eng-target');
+            if (engTargetEl) {
+                engTargetEl.style.left = `${engTargetMin}%`;
+                engTargetEl.style.width = `${engTargetMax - engTargetMin}%`;
+            }
+            engSliderInterval = setInterval(() => {
+                engSliderPosition += engSliderDirection * 4.0;
+                if (engSliderPosition >= 100) { engSliderPosition = 100; engSliderDirection = -1; }
+                if (engSliderPosition <= 0) { engSliderPosition = 0; engSliderDirection = 1; }
+                const engPinEl = document.getElementById('eng-pin');
+                if (engPinEl) engPinEl.style.left = `${engSliderPosition}%`;
+            }, 30);
+        }
+
+        function attemptEngineeringPurge() {
+            if (currentRole !== 'Engineer') return;
+            if (engSliderPosition >= engTargetMin && engSliderPosition <= engTargetMax) {
+                socket.emit('submit_engineering_balance', { success: true });
+                startEngineeringSliderLoop();
+            } else {
+                socket.emit('submit_engineering_balance', { success: false });
+            }
+        }
+
+        function renderEngineeringGaugeLoop() {
+            if (currentRole !== 'Engineer') return;
+            const canvas = document.getElementById('eng-gauge-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            const cx = w / 2, cy = h - 10, r = 160;
+            ctx.strokeStyle = '#1f293d';
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+            ctx.stroke();
+            const heatVal = localState.thermalLoad || 0.0;
+            let gaugeColor = '#a855f7';
+            if (heatVal > 40.0) gaugeColor = '#f59e0b';
+            if (heatVal > 75.0) gaugeColor = '#ef4444';
+            const heatPercent = Math.min(100.0, heatVal) / 100.0;
+            const endAngle = Math.PI + (Math.PI * heatPercent);
+            if (heatPercent > 0) {
+                ctx.strokeStyle = gaugeColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, Math.PI, endAngle);
+                ctx.stroke();
+            }
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(endAngle - 2 * Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(r - 15, 0);
+            ctx.lineTo(0, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            ctx.fillStyle = '#1f293d';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 15, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            requestAnimationFrame(renderEngineeringGaugeLoop);
+        }
+
+        function stopEngineeringLoops() {
+            if (engSliderInterval) { clearInterval(engSliderInterval); engSliderInterval = null; }
+        }
+            } else {
+
+        // --- Task 2.4 Frontend Loops for Chief Engineer Minigame Module ---
+        function startEngineeringSliderLoop() {
+            if (engSliderInterval) clearInterval(engSliderInterval);
+            engTargetMin = Math.floor(Math.random() * 65) + 10;
+            engTargetMax = engTargetMin + 12;
+            const engTargetEl = document.getElementById('eng-target');
+            if (engTargetEl) {
+                engTargetEl.style.left = `${engTargetMin}%`;
+                engTargetEl.style.width = `${engTargetMax - engTargetMin}%`;
+            }
+            engSliderInterval = setInterval(() => {
+                engSliderPosition += engSliderDirection * 4.0;
+                if (engSliderPosition >= 100) { engSliderPosition = 100; engSliderDirection = -1; }
+                if (engSliderPosition <= 0) { engSliderPosition = 0; engSliderDirection = 1; }
+                const engPinEl = document.getElementById('eng-pin');
+                if (engPinEl) engPinEl.style.left = `${engSliderPosition}%`;
+            }, 30);
+        }
+
+        function attemptEngineeringPurge() {
+            if (currentRole !== 'Engineer') return;
+            if (engSliderPosition >= engTargetMin && engSliderPosition <= engTargetMax) {
+                socket.emit('submit_engineering_balance', { success: true });
+                startEngineeringSliderLoop();
+            } else {
+                socket.emit('submit_engineering_balance', { success: false });
+            }
+        }
+
+        function renderEngineeringGaugeLoop() {
+            if (currentRole !== 'Engineer') return;
+            const canvas = document.getElementById('eng-gauge-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            const cx = w / 2, cy = h - 10, r = 160;
+            ctx.strokeStyle = '#1f293d';
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+            ctx.stroke();
+            const heatVal = localState.thermalLoad || 0.0;
+            let gaugeColor = '#a855f7';
+            if (heatVal > 40.0) gaugeColor = '#f59e0b';
+            if (heatVal > 75.0) gaugeColor = '#ef4444';
+            const heatPercent = Math.min(100.0, heatVal) / 100.0;
+            const endAngle = Math.PI + (Math.PI * heatPercent);
+            if (heatPercent > 0) {
+                ctx.strokeStyle = gaugeColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, Math.PI, endAngle);
+                ctx.stroke();
+            }
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(endAngle - 2 * Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(r - 15, 0);
+            ctx.lineTo(0, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            ctx.fillStyle = '#1f293d';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 15, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            requestAnimationFrame(renderEngineeringGaugeLoop);
+        }
+
+        function stopEngineeringLoops() {
+            if (engSliderInterval) { clearInterval(engSliderInterval); engSliderInterval = null; }
+        }
+                // Flash fault indicator and restart tracking loop metrics
+
+        // --- Task 2.4 Frontend Loops for Chief Engineer Minigame Module ---
+        function startEngineeringSliderLoop() {
+            if (engSliderInterval) clearInterval(engSliderInterval);
+            engTargetMin = Math.floor(Math.random() * 65) + 10;
+            engTargetMax = engTargetMin + 12;
+            const engTargetEl = document.getElementById('eng-target');
+            if (engTargetEl) {
+                engTargetEl.style.left = `${engTargetMin}%`;
+                engTargetEl.style.width = `${engTargetMax - engTargetMin}%`;
+            }
+            engSliderInterval = setInterval(() => {
+                engSliderPosition += engSliderDirection * 4.0;
+                if (engSliderPosition >= 100) { engSliderPosition = 100; engSliderDirection = -1; }
+                if (engSliderPosition <= 0) { engSliderPosition = 0; engSliderDirection = 1; }
+                const engPinEl = document.getElementById('eng-pin');
+                if (engPinEl) engPinEl.style.left = `${engSliderPosition}%`;
+            }, 30);
+        }
+
+        function attemptEngineeringPurge() {
+            if (currentRole !== 'Engineer') return;
+            if (engSliderPosition >= engTargetMin && engSliderPosition <= engTargetMax) {
+                socket.emit('submit_engineering_balance', { success: true });
+                startEngineeringSliderLoop();
+            } else {
+                socket.emit('submit_engineering_balance', { success: false });
+            }
+        }
+
+        function renderEngineeringGaugeLoop() {
+            if (currentRole !== 'Engineer') return;
+            const canvas = document.getElementById('eng-gauge-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            const cx = w / 2, cy = h - 10, r = 160;
+            ctx.strokeStyle = '#1f293d';
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+            ctx.stroke();
+            const heatVal = localState.thermalLoad || 0.0;
+            let gaugeColor = '#a855f7';
+            if (heatVal > 40.0) gaugeColor = '#f59e0b';
+            if (heatVal > 75.0) gaugeColor = '#ef4444';
+            const heatPercent = Math.min(100.0, heatVal) / 100.0;
+            const endAngle = Math.PI + (Math.PI * heatPercent);
+            if (heatPercent > 0) {
+                ctx.strokeStyle = gaugeColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, Math.PI, endAngle);
+                ctx.stroke();
+            }
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(endAngle - 2 * Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(r - 15, 0);
+            ctx.lineTo(0, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            ctx.fillStyle = '#1f293d';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 15, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            requestAnimationFrame(renderEngineeringGaugeLoop);
+        }
+
+        function stopEngineeringLoops() {
+            if (engSliderInterval) { clearInterval(engSliderInterval); engSliderInterval = null; }
+        }
+                document.getElementById('cal-status-label').innerText = "❌ FAULT DETECTED: ALIGNMENT RE-INDEXING";
+
+        // --- Task 2.4 Frontend Loops for Chief Engineer Minigame Module ---
+        function startEngineeringSliderLoop() {
+            if (engSliderInterval) clearInterval(engSliderInterval);
+            engTargetMin = Math.floor(Math.random() * 65) + 10;
+            engTargetMax = engTargetMin + 12;
+            const engTargetEl = document.getElementById('eng-target');
+            if (engTargetEl) {
+                engTargetEl.style.left = `${engTargetMin}%`;
+                engTargetEl.style.width = `${engTargetMax - engTargetMin}%`;
+            }
+            engSliderInterval = setInterval(() => {
+                engSliderPosition += engSliderDirection * 4.0;
+                if (engSliderPosition >= 100) { engSliderPosition = 100; engSliderDirection = -1; }
+                if (engSliderPosition <= 0) { engSliderPosition = 0; engSliderDirection = 1; }
+                const engPinEl = document.getElementById('eng-pin');
+                if (engPinEl) engPinEl.style.left = `${engSliderPosition}%`;
+            }, 30);
+        }
+
+        function attemptEngineeringPurge() {
+            if (currentRole !== 'Engineer') return;
+            if (engSliderPosition >= engTargetMin && engSliderPosition <= engTargetMax) {
+                socket.emit('submit_engineering_balance', { success: true });
+                startEngineeringSliderLoop();
+            } else {
+                socket.emit('submit_engineering_balance', { success: false });
+            }
+        }
+
+        function renderEngineeringGaugeLoop() {
+            if (currentRole !== 'Engineer') return;
+            const canvas = document.getElementById('eng-gauge-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            const cx = w / 2, cy = h - 10, r = 160;
+            ctx.strokeStyle = '#1f293d';
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+            ctx.stroke();
+            const heatVal = localState.thermalLoad || 0.0;
+            let gaugeColor = '#a855f7';
+            if (heatVal > 40.0) gaugeColor = '#f59e0b';
+            if (heatVal > 75.0) gaugeColor = '#ef4444';
+            const heatPercent = Math.min(100.0, heatVal) / 100.0;
+            const endAngle = Math.PI + (Math.PI * heatPercent);
+            if (heatPercent > 0) {
+                ctx.strokeStyle = gaugeColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, Math.PI, endAngle);
+                ctx.stroke();
+            }
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(endAngle - 2 * Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(r - 15, 0);
+            ctx.lineTo(0, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            ctx.fillStyle = '#1f293d';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 15, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            requestAnimationFrame(renderEngineeringGaugeLoop);
+        }
+
+        function stopEngineeringLoops() {
+            if (engSliderInterval) { clearInterval(engSliderInterval); engSliderInterval = null; }
+        }
+                document.getElementById('cal-status-label').style.color = "#ef4444";
+
+        // --- Task 2.4 Frontend Loops for Chief Engineer Minigame Module ---
+        function startEngineeringSliderLoop() {
+            if (engSliderInterval) clearInterval(engSliderInterval);
+            engTargetMin = Math.floor(Math.random() * 65) + 10;
+            engTargetMax = engTargetMin + 12;
+            const engTargetEl = document.getElementById('eng-target');
+            if (engTargetEl) {
+                engTargetEl.style.left = `${engTargetMin}%`;
+                engTargetEl.style.width = `${engTargetMax - engTargetMin}%`;
+            }
+            engSliderInterval = setInterval(() => {
+                engSliderPosition += engSliderDirection * 4.0;
+                if (engSliderPosition >= 100) { engSliderPosition = 100; engSliderDirection = -1; }
+                if (engSliderPosition <= 0) { engSliderPosition = 0; engSliderDirection = 1; }
+                const engPinEl = document.getElementById('eng-pin');
+                if (engPinEl) engPinEl.style.left = `${engSliderPosition}%`;
+            }, 30);
+        }
+
+        function attemptEngineeringPurge() {
+            if (currentRole !== 'Engineer') return;
+            if (engSliderPosition >= engTargetMin && engSliderPosition <= engTargetMax) {
+                socket.emit('submit_engineering_balance', { success: true });
+                startEngineeringSliderLoop();
+            } else {
+                socket.emit('submit_engineering_balance', { success: false });
+            }
+        }
+
+        function renderEngineeringGaugeLoop() {
+            if (currentRole !== 'Engineer') return;
+            const canvas = document.getElementById('eng-gauge-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            const cx = w / 2, cy = h - 10, r = 160;
+            ctx.strokeStyle = '#1f293d';
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+            ctx.stroke();
+            const heatVal = localState.thermalLoad || 0.0;
+            let gaugeColor = '#a855f7';
+            if (heatVal > 40.0) gaugeColor = '#f59e0b';
+            if (heatVal > 75.0) gaugeColor = '#ef4444';
+            const heatPercent = Math.min(100.0, heatVal) / 100.0;
+            const endAngle = Math.PI + (Math.PI * heatPercent);
+            if (heatPercent > 0) {
+                ctx.strokeStyle = gaugeColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, Math.PI, endAngle);
+                ctx.stroke();
+            }
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(endAngle - 2 * Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(r - 15, 0);
+            ctx.lineTo(0, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            ctx.fillStyle = '#1f293d';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 15, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            requestAnimationFrame(renderEngineeringGaugeLoop);
+        }
+
+        function stopEngineeringLoops() {
+            if (engSliderInterval) { clearInterval(engSliderInterval); engSliderInterval = null; }
+        }
+                startCalibrationLoop();
+
+        // --- Task 2.4 Frontend Loops for Chief Engineer Minigame Module ---
+        function startEngineeringSliderLoop() {
+            if (engSliderInterval) clearInterval(engSliderInterval);
+            engTargetMin = Math.floor(Math.random() * 65) + 10;
+            engTargetMax = engTargetMin + 12;
+            const engTargetEl = document.getElementById('eng-target');
+            if (engTargetEl) {
+                engTargetEl.style.left = `${engTargetMin}%`;
+                engTargetEl.style.width = `${engTargetMax - engTargetMin}%`;
+            }
+            engSliderInterval = setInterval(() => {
+                engSliderPosition += engSliderDirection * 4.0;
+                if (engSliderPosition >= 100) { engSliderPosition = 100; engSliderDirection = -1; }
+                if (engSliderPosition <= 0) { engSliderPosition = 0; engSliderDirection = 1; }
+                const engPinEl = document.getElementById('eng-pin');
+                if (engPinEl) engPinEl.style.left = `${engSliderPosition}%`;
+            }, 30);
+        }
+
+        function attemptEngineeringPurge() {
+            if (currentRole !== 'Engineer') return;
+            if (engSliderPosition >= engTargetMin && engSliderPosition <= engTargetMax) {
+                socket.emit('submit_engineering_balance', { success: true });
+                startEngineeringSliderLoop();
+            } else {
+                socket.emit('submit_engineering_balance', { success: false });
+            }
+        }
+
+        function renderEngineeringGaugeLoop() {
+            if (currentRole !== 'Engineer') return;
+            const canvas = document.getElementById('eng-gauge-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            const cx = w / 2, cy = h - 10, r = 160;
+            ctx.strokeStyle = '#1f293d';
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+            ctx.stroke();
+            const heatVal = localState.thermalLoad || 0.0;
+            let gaugeColor = '#a855f7';
+            if (heatVal > 40.0) gaugeColor = '#f59e0b';
+            if (heatVal > 75.0) gaugeColor = '#ef4444';
+            const heatPercent = Math.min(100.0, heatVal) / 100.0;
+            const endAngle = Math.PI + (Math.PI * heatPercent);
+            if (heatPercent > 0) {
+                ctx.strokeStyle = gaugeColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, Math.PI, endAngle);
+                ctx.stroke();
+            }
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(endAngle - 2 * Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(r - 15, 0);
+            ctx.lineTo(0, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            ctx.fillStyle = '#1f293d';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 15, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            requestAnimationFrame(renderEngineeringGaugeLoop);
+        }
+
+        function stopEngineeringLoops() {
+            if (engSliderInterval) { clearInterval(engSliderInterval); engSliderInterval = null; }
+        }
+            }
+
+        // --- Task 2.4 Frontend Loops for Chief Engineer Minigame Module ---
+        function startEngineeringSliderLoop() {
+            if (engSliderInterval) clearInterval(engSliderInterval);
+            engTargetMin = Math.floor(Math.random() * 65) + 10;
+            engTargetMax = engTargetMin + 12;
+            const engTargetEl = document.getElementById('eng-target');
+            if (engTargetEl) {
+                engTargetEl.style.left = `${engTargetMin}%`;
+                engTargetEl.style.width = `${engTargetMax - engTargetMin}%`;
+            }
+            engSliderInterval = setInterval(() => {
+                engSliderPosition += engSliderDirection * 4.0;
+                if (engSliderPosition >= 100) { engSliderPosition = 100; engSliderDirection = -1; }
+                if (engSliderPosition <= 0) { engSliderPosition = 0; engSliderDirection = 1; }
+                const engPinEl = document.getElementById('eng-pin');
+                if (engPinEl) engPinEl.style.left = `${engSliderPosition}%`;
+            }, 30);
+        }
+
+        function attemptEngineeringPurge() {
+            if (currentRole !== 'Engineer') return;
+            if (engSliderPosition >= engTargetMin && engSliderPosition <= engTargetMax) {
+                socket.emit('submit_engineering_balance', { success: true });
+                startEngineeringSliderLoop();
+            } else {
+                socket.emit('submit_engineering_balance', { success: false });
+            }
+        }
+
+        function renderEngineeringGaugeLoop() {
+            if (currentRole !== 'Engineer') return;
+            const canvas = document.getElementById('eng-gauge-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            const cx = w / 2, cy = h - 10, r = 160;
+            ctx.strokeStyle = '#1f293d';
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+            ctx.stroke();
+            const heatVal = localState.thermalLoad || 0.0;
+            let gaugeColor = '#a855f7';
+            if (heatVal > 40.0) gaugeColor = '#f59e0b';
+            if (heatVal > 75.0) gaugeColor = '#ef4444';
+            const heatPercent = Math.min(100.0, heatVal) / 100.0;
+            const endAngle = Math.PI + (Math.PI * heatPercent);
+            if (heatPercent > 0) {
+                ctx.strokeStyle = gaugeColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, Math.PI, endAngle);
+                ctx.stroke();
+            }
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(endAngle - 2 * Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(r - 15, 0);
+            ctx.lineTo(0, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            ctx.fillStyle = '#1f293d';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 15, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            requestAnimationFrame(renderEngineeringGaugeLoop);
+        }
+
+        function stopEngineeringLoops() {
+            if (engSliderInterval) { clearInterval(engSliderInterval); engSliderInterval = null; }
+        }
+        }
+
+        // --- Task 2.4 Frontend Loops for Chief Engineer Minigame Module ---
+        function startEngineeringSliderLoop() {
+            if (engSliderInterval) clearInterval(engSliderInterval);
+            engTargetMin = Math.floor(Math.random() * 65) + 10;
+            engTargetMax = engTargetMin + 12;
+            const engTargetEl = document.getElementById('eng-target');
+            if (engTargetEl) {
+                engTargetEl.style.left = `${engTargetMin}%`;
+                engTargetEl.style.width = `${engTargetMax - engTargetMin}%`;
+            }
+            engSliderInterval = setInterval(() => {
+                engSliderPosition += engSliderDirection * 4.0;
+                if (engSliderPosition >= 100) { engSliderPosition = 100; engSliderDirection = -1; }
+                if (engSliderPosition <= 0) { engSliderPosition = 0; engSliderDirection = 1; }
+                const engPinEl = document.getElementById('eng-pin');
+                if (engPinEl) engPinEl.style.left = `${engSliderPosition}%`;
+            }, 30);
+        }
+
+        function attemptEngineeringPurge() {
+            if (currentRole !== 'Engineer') return;
+            if (engSliderPosition >= engTargetMin && engSliderPosition <= engTargetMax) {
+                socket.emit('submit_engineering_balance', { success: true });
+                startEngineeringSliderLoop();
+            } else {
+                socket.emit('submit_engineering_balance', { success: false });
+            }
+        }
+
+        function renderEngineeringGaugeLoop() {
+            if (currentRole !== 'Engineer') return;
+            const canvas = document.getElementById('eng-gauge-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            const cx = w / 2, cy = h - 10, r = 160;
+            ctx.strokeStyle = '#1f293d';
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+            ctx.stroke();
+            const heatVal = localState.thermalLoad || 0.0;
+            let gaugeColor = '#a855f7';
+            if (heatVal > 40.0) gaugeColor = '#f59e0b';
+            if (heatVal > 75.0) gaugeColor = '#ef4444';
+            const heatPercent = Math.min(100.0, heatVal) / 100.0;
+            const endAngle = Math.PI + (Math.PI * heatPercent);
+            if (heatPercent > 0) {
+                ctx.strokeStyle = gaugeColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, Math.PI, endAngle);
+                ctx.stroke();
+            }
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(endAngle - 2 * Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(r - 15, 0);
+            ctx.lineTo(0, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            ctx.fillStyle = '#1f293d';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 15, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            requestAnimationFrame(renderEngineeringGaugeLoop);
+        }
+
+        function stopEngineeringLoops() {
+            if (engSliderInterval) { clearInterval(engSliderInterval); engSliderInterval = null; }
         }
 
         function clearSonarPins() {
@@ -404,6 +1488,14 @@
                 localState.pos = data.teamState.pos;
                 localState.heading = data.teamState.heading;
                 localState.target = data.teamState.target;
+                localState.thermalLoad = data.teamState.thermalLoad || 0.0;
+                const thermText = document.getElementById('eng-thermal-text');
+                if (thermText) {
+                    thermText.innerText = `${localState.thermalLoad.toFixed(1)}°C`;
+                    if (localState.thermalLoad > 75.0) thermText.style.color = '#ef4444';
+                    else if (localState.thermalLoad > 40.0) thermText.style.color = '#f59e0b';
+                    else thermText.style.color = '#a855f7';
+                }
             }
 
             if (data.teamState.power) {
@@ -496,12 +1588,14 @@
             sonarPins = [];
             activeRadarDistance = null;
             if (sliderInterval) clearInterval(sliderInterval);
+            stopEngineeringLoops();
             
             document.getElementById('game-screen').classList.add('hidden');
             document.getElementById('setup-screen').classList.remove('hidden');
             
             const sl = document.getElementById('sonar-logs'); if (sl) sl.innerHTML = '<div style="color: #6b7280;">[HYDROPHONES ONLINE]</div>';
             const cl = document.getElementById('captain-sonar-logs'); if (cl) cl.innerHTML = '<div style="color: #6b7280;">[HYDROPHONE BRIDGE REPEATER ONLINE]</div>';
+            const el = document.getElementById('engineer-logs'); if (el) el.innerHTML = '<div style="color: #6b7280;">[REACTOR TELEMETRY STREAM COMPLIANT]</div>';
         });
     </script>
 </body>

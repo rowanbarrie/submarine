@@ -29,7 +29,6 @@ When modifying the workspace, ensure your generated payloads comply with these h
 
 ## 🎯 Next Tasks in Queue
 Consult the backlog tracking arrays inside **README.md** and begin implementation immediately on:
-1. **Phase 5, Step 2: Engineering Auxiliary Power Routing Minigame** inside the `#panel-Engineer` workspace.
 
 ### 3. Syntax Block Guardrails (Anti-Spill Protocol)
 * **Explicit Enclosures**: Every script, command, or code block must have a matching closing fence block (` ``` `) immediately following the payload.
