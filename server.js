@@ -26,7 +26,9 @@ let gameState = {
             power: { engines: 2, weapons: 2, shields: 2 },
             calibrated: false,
             expectedToken: null
+            thermalLoad: 0.0, // Task 2.1 Backend State Metric
         },
+            thermalLoad: 0.0, // Task 2.1 Backend State Metric
         Bravo: { 
             pos: { x: 600.0, y: 600.0 }, 
             hp: 100, 
@@ -36,7 +38,9 @@ let gameState = {
             power: { engines: 2, weapons: 2, shields: 2 },
             calibrated: false,
             expectedToken: null
+            thermalLoad: 0.0, // Task 2.1 Backend State Metric
         }
+            thermalLoad: 0.0, // Task 2.1 Backend State Metric
     }
 };
 
@@ -57,6 +61,16 @@ setInterval(() => {
 
     for (const teamId of Object.keys(gameState.teams)) {
         const team = gameState.teams[teamId];
+        // Task 2.1 Thermal Core Simulation Loop
+        const DECAY_RATE = 8.0;
+        const ENGINE_HEAT_FACTOR = 4.5;
+        const SHIELD_HEAT_FACTOR = 2.0;
+        let thermalGen = 0.0;
+        if (team.speed > 0 && team.power.engines >= 2) thermalGen += team.power.engines * ENGINE_HEAT_FACTOR;
+        thermalGen += team.power.shields * SHIELD_HEAT_FACTOR;
+        const oldThermal = team.thermalLoad || 0.0;
+        team.thermalLoad = Math.max(0.0, oldThermal + (thermalGen - DECAY_RATE) * dt);
+        if (Math.abs(team.thermalLoad - oldThermal) > 0.01) stateChanged = true;
         
         // Enforce engine minimum thresholds. Submarines stall under 2 power.
         if (team.power.engines >= 2 && team.speed > 0) {
@@ -168,6 +182,8 @@ io.on('connection', (socket) => {
         
         // Target shift automatically discharges capacitor to enforce a fresh calibration verification run
         gameState.teams[team].calibrated = false;
+        // Task 2.1 Weapon Strike Thermal Spike
+        gameState.teams[team].thermalLoad = (gameState.teams[team].thermalLoad || 0.0) + 35.0;
         const token = 'TK-' + Math.floor(Math.random() * 89999 + 10000);
         gameState.teams[team].expectedToken = token;
         io.to(team).emit('request_calibration', { token });
@@ -219,6 +235,8 @@ io.on('connection', (socket) => {
 
         // Consume authorization lock immediately post-launch
         gameState.teams[team].calibrated = false;
+        // Task 2.1 Weapon Strike Thermal Spike
+        gameState.teams[team].thermalLoad = (gameState.teams[team].thermalLoad || 0.0) + 35.0;
 
         if (torpedoDistance <= BLAST_RADIUS) {
             const enemyShields = gameState.teams[enemyTeam].power.shields;
@@ -261,8 +279,11 @@ io.on('connection', (socket) => {
             active: true,
             arena: { width: 800.0, height: 800.0 },
             teams: {
-                Alpha: { pos: { x: 200.0, y: 200.0 }, hp: 100, speed: 0.0, heading: 0.0, target: { x: 400.0, y: 400.0 }, roster: [], power: { engines: 2, weapons: 2, shields: 2 }, calibrated: false, expectedToken: null },
-                Bravo: { pos: { x: 600.0, y: 600.0 }, hp: 100, speed: 0.0, heading: 0.0, target: { x: 400.0, y: 400.0 }, roster: [], power: { engines: 2, weapons: 2, shields: 2 }, calibrated: false, expectedToken: null }
+                Alpha: { pos: { x: 200.0, y: 200.0 }, hp: 100, speed: 0.0, heading: 0.0, target: { x: 400.0, y: 400.0 }, roster: [], power: { engines: 2, weapons: 2, shields: 2 }, calibrated: false, expectedToken: null, thermalLoad: 0.0 },
+            thermalLoad: 0.0, // Task 2.1 Backend State Metric
+                Bravo: { pos: { x: 600.0, y: 600.0 }, hp: 100, speed: 0.0, heading: 0.0, target: { x: 400.0, y: 400.0 }, roster: [], power: { engines: 2, weapons: 2, shields: 2 }, calibrated: false, expectedToken: null, thermalLoad: 0.0 }
+            thermalLoad: 0.0, // Task 2.1 Backend State Metric
+            thermalLoad: 0.0, // Task 2.1 Backend State Metric
             }
         };
         io.emit('game_over', { winner: 'SYSTEM RESET' }); 
