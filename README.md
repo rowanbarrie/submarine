@@ -1,79 +1,76 @@
-# Project Vision Blueprint: SILENT DEPTH (High-Level Design)
+# 🚢 Project Master Blueprint: SILENT DEPTH 
 
-## 🚢 Overview & Core Gameplay Mechanics
-"Silent Depth" is a mobile browser-based asymmetric tactical party game designed for two teams (Alpha and Bravo) playing in two physically separate rooms. The game mechanics are heavily inspired by classic submarine warfare movies like *The Hunt for Red October*. Teams have no direct visual info on the enemy. They must rely entirely on asymmetric verbal communication inside their rooms and tactical telemetry sent via mobile browser control panels to hunt, locate, and sink the opposing submarine.
-
-### 🎮 The Core Game Loop
-* **The Arena:** The battle takes place on a hidden 8x8 navigation grid managed by the server.
-* **Movement & Detection:** Every time a submarine moves, the system calculates the grid-based Manhattan distance to the enemy and broadcasts it only to the opposing team's Sonar station.
-* **The Strike:** The Captain marks target coordinates on an interactive display, which synchronizes instantly with the Weapons station. The Weapons Officer can then fire a torpedo. Two direct hits sink a submarine and win the game.
+"Silent Depth" is a mobile browser-based asymmetric tactical party game designed for two teams (Alpha and Bravo) playing in physically separate spaces. Teams have no direct visual data on the enemy; they must rely entirely on asymmetric verbal communication and tactical telemetry streams to hunt, locate, and sink the opposing submarine.
 
 ---
 
-## 👥 Player Stations (Per Submarine Room)
+## 🏁 Architectural Phase Roadmap & Live Status
+
+| Phase | Description | Status | Engineering Deliverables |
+| :--- | :--- | :--- | :--- |
+| **Phase 1** | Coordinate System Re-Mapping | **Done** | Server upscaled from integer grids to 800x800 float spaces. |
+| **Phase 2** | Vector Mechanics & Kinematics | **Done** | Implemented 30Hz server physics loop and client keyboard tracking vectors. |
+| **Phase 3** | Spatial Telemetry & Collisions | **Done** | Integrated Euclidean matrix lookups and circle weapon splash radii. |
+| **Phase 4** | Frontend UI Canvas Rendering | **Done** | Legacy DOM grids completely replaced with interactive 2D HTML5 `<canvas>` maps. |
+| **Phase 5** | Interlocking Station Minigames | **In Progress** | Server-verified calibration slider loops (Weapons complete, Engineering pending). |
+
+---
+
+## 👥 Player Stations & Duties
 
 ### 1. 🧭 Captain (Helm & Strategy)
-* **Interface:** Interactive 8x8 grid map view showing own submarine position and the active weapons crosshair lock. Equipped with directional movement controls.
-* **Duties:** Navigates the grid matrix, determines defensive positioning, updates offensive targeting by tapping grid squares, and commands the room's operations.
+* **Interface:** Absolute 800x800 2D vector map rendering own position as a blue heading arrow. 
+* **Duties:** Navigates via throttled continuous keyboard input vector paths (`W`,`A`,`S`,`D`), establishes target fire-control coordinate locks via canvas clicks, and directs the overall crew.
 
 ### 2. 📡 Sonar Technician (Tracking & Intel)
-* **Interface:** Scrolling high-visibility passive telemetry logs feed.
-* **Duties:** Receives automatic raw distance estimation alerts every time the enemy sub moves (e.g., estimating distance in sectors away). Must coordinate verbally with the Captain to deduce, map, and predict the enemy's exact coordinates.
+* **Interface:** High-visibility passive acoustic waterfall logs and active proximity range overlay arcs.
+* **Duties:** Extracts continuous Euclidean floats broadcast by the engine when the target moves. Manually drops pin markers (Green = Suspected Track, Red = Weapon Splash) to deduce paths.
 
 ### 3. 💥 Weapons Officer (Torpedo Engagement)
-* **Interface:** Payload activation panel receiving real-time crosshair coordinate locks directly from the Captain's bridge display.
-* **Duties:** Confirms structural targeting telemetry, completes the server-verified capacitor calibration minigame to lock firing solutions, and executes torpedo launches.
+* **Interface:** Payload monitoring bay receiving real-time crosshair coordinates directly from the bridge.
+* **Duties:** Interacts with a synchronized oscillator timing slider. Must manually secure an alignment match to satisfy server-side security checks before launching ordnance.
 
-### 4. 🛠️ Chief Engineer (System Repairs & Power Management)
-* **Interface:** Structural maintenance bay panel.
-* **Duties:** Standardized structural systems backup monitor (slated for rapid mini-game integrations to repair hull damage points and manage energy cooling thresholds).
-
----
-
-## 🏗️ Technical Architecture & Network Design
-
-### ⚡ Infrastructure Specs
-* **Backend Host:** DigitalOcean Droplet Instance handling unified game state.
-* **Real-time Protocol:** Node.js backend using Socket.io with forced native WebSocket transport configurations. This ensures immediate data synchronization and bypasses cellular network long-polling latency on mobile browsers.
-* **Network Security:** Explicit internal and external firewall rules configured to permit public incoming traffic strictly over port 3000.
-* **Frontend Delivery:** Pure lightweight, semantic HTML5 and vanilla CSS. By embedding styling directly and avoiding heavy frontend framework scripts, the page weight remains under 4KB, allowing instantaneous rendering over cellular data.
-
-### 🔄 Dynamic State Tracking
-* **Server Authority:** The server remains the single source of truth, storing absolute coordinate objects for both teams and processing collision/hit boxes.
-* **Client Isolation:** The server selectively broadcasts game data. A team's state is strictly hidden from the opponents, passing only derived abstraction telemetry (like calculated distance values) to the enemy room.
+### 4. 🛠️ Chief Engineer (Auxiliary Power Allocation)
+* **Interface:** Dynamic power-grid allocation matrix managing 6 reactor cell tracks (`engines`, `weapons`, `shields`).
+* **Duties:** Routes active power cells to systems (requires $\ge 2$ units per block to function). *Slated for an auxiliary voltage balancing minigame integration.*
 
 ---
 
-## 🗺️ Next Generation Feature Backlog
+## 🏗️ Technical Architecture Constraints
 
-1. **Engineering Resource Routing:** Active control valves for engineers to run hull welding checks or dump engine heat signatures to initiate silent stealth runs.
-2. **Multi-Match Lobby Allocations:** Implement dynamic room IDs so multiple separate game pairings can deploy over a single server node.
+* **Pure Float Communication:** The codebase uses continuous Euclidean vector scales. Do not reintroduce row/column snapping or integer division into input streams.
+* **Network Weight Budget:** Total client code relies exclusively on lightweight semantic HTML5, vanilla JavaScript, and native inline styling. Page assets must remain under 4KB to ensure instantaneous loading over cellular connections.
+* **Transport Locking:** Network packets strictly mandate native WebSockets configurations (`{ transports: ['websocket'] }`) on client initialization to eliminate long-polling fallbacks on cellular links.
+* **Cryptographic Token Verification:** Targeted coordinate changes instantly de-authorize active weapons systems on the backend. Firing torpedoes requires submitting an active, randomized validation flag (`expectedToken`) generated by the physics loop.
 
-## 🚀 Production Deployment via PM2
+---
 
-To ensure the game server runs continuously in the background on your DigitalOcean Droplet and automatically restarts after crashes or reboots, deploy it using PM2:
+## 🔮 Next Generation Feature Backlog
 
+1. **Phase 5, Step 2: Engineering Auxiliary Power Routing Minigame:** Implement an interactive grid balancing mini-game inside the Engineer panel to handle hull weld integrity and silent stealth thermal discharges.
+2. **Multi-Match Lobby Allocations:** Restructure internal room routing arrays to accept custom party ID codes, allowing multiple separate games to run simultaneously on a single droplet.
+
+---
+
+## 🚀 Operations & Tooling Ledger
+
+### Production Deployment via PM2
+To manage background service persistence on your DigitalOcean Droplet:
 ```bash
-# Install PM2 globally
+# Install tool utility globally
 sudo npm install -g pm2
 
-# Launch your server file and assign it a name
+# Initialize background thread instance
 pm2 start server.js --name "submarine"
 
-# Ensure PM2 boots up your game automatically if the Droplet reboots
+# Save service parameters to machine startup profiles
 pm2 startup
 pm2 save
 ```
 
-
-## 📦 Codebase Packing with Repomix
-
-This project uses [Repomix](https://github.com) to pack the codebase into a single file for AI code reviews and analysis.
-
-To generate a new packed repository file, run:
-
+### Codebase Packing with Repomix
+To pack current workspace directories into a unified document context for AI review:
 ```bash
 npx repomix
 ```
-
-*Excluded by default via `.gitignore`: `node_modules/`, `npm-debug.log`, and `repomix-output.xml`.*
+*(All local dependency trees, output logs, and compiled configurations are filtered automatically via `.gitignore` settings).*
