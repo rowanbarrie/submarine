@@ -34,3 +34,7 @@ Consult the backlog tracking arrays inside **README.md** and begin implementatio
 ### 3. Syntax Block Guardrails (Anti-Spill Protocol)
 * **Explicit Enclosures**: Every script, command, or code block must have a matching closing fence block (` ``` `) immediately following the payload.
 * **Pre-Flight Validation**: Double-check that structural text formatting strings do not accidentally bleed out into the conversational UI layout before finalizing delivery.
+
+### 4. Large-Context Streaming Containment Protocol
+* **Sed Priority**: When editing long architecture backends (e.g., `server.js`), prefer highly targeted inline stream transformations over full code block rewrites.
+* **Token Cap Mitigation**: If a complete file replacement is necessary, fragment the code array into separate, sequentially requested steps to prevent truncation, layout leaks, or conversational UI spilling.
