@@ -25,10 +25,9 @@ let gameState = {
             target: { x: 400.0, y: 400.0 },
             power: { engines: 2, weapons: 2, shields: 2 },
             calibrated: false,
-            expectedToken: null
-            thermalLoad: 0.0, // Task 2.1 Backend State Metric
+            expectedToken: null,
+            thermalLoad: 0.0 // Task 2.1 Backend State Metric
         },
-            thermalLoad: 0.0, // Task 2.1 Backend State Metric
         Bravo: { 
             pos: { x: 600.0, y: 600.0 }, 
             hp: 100, 
@@ -37,10 +36,9 @@ let gameState = {
             target: { x: 400.0, y: 400.0 },
             power: { engines: 2, weapons: 2, shields: 2 },
             calibrated: false,
-            expectedToken: null
-            thermalLoad: 0.0, // Task 2.1 Backend State Metric
+            expectedToken: null,
+            thermalLoad: 0.0 // Task 2.1 Backend State Metric
         }
-            thermalLoad: 0.0, // Task 2.1 Backend State Metric
     }
 };
 
@@ -149,13 +147,9 @@ io.on('connection', (socket) => {
             const currentHeat = gameState.teams[team].thermalLoad || 0.0;
             gameState.teams[team].thermalLoad = Math.max(0.0, currentHeat * 0.6);
             socket.emit('sonar_ping', { message: "🛠️ REACTOR VENTED: Core auxiliary voltages balanced. Thermal load purged." });
-            io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
         } else {
             socket.emit('sonar_ping', { message: "⚠️ ENGINEERING FAULT: Auxiliary balance vector rejected." });
         }
-    });
-    //
-
         io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
     });
 
@@ -298,10 +292,7 @@ io.on('connection', (socket) => {
             arena: { width: 800.0, height: 800.0 },
             teams: {
                 Alpha: { pos: { x: 200.0, y: 200.0 }, hp: 100, speed: 0.0, heading: 0.0, target: { x: 400.0, y: 400.0 }, roster: [], power: { engines: 2, weapons: 2, shields: 2 }, calibrated: false, expectedToken: null, thermalLoad: 0.0 },
-            thermalLoad: 0.0, // Task 2.1 Backend State Metric
                 Bravo: { pos: { x: 600.0, y: 600.0 }, hp: 100, speed: 0.0, heading: 0.0, target: { x: 400.0, y: 400.0 }, roster: [], power: { engines: 2, weapons: 2, shields: 2 }, calibrated: false, expectedToken: null, thermalLoad: 0.0 }
-            thermalLoad: 0.0, // Task 2.1 Backend State Metric
-            thermalLoad: 0.0, // Task 2.1 Backend State Metric
             }
         };
         io.emit('game_over', { winner: 'SYSTEM RESET' }); 
