@@ -147,6 +147,17 @@
                 </div>
                 <div class="power-row">
                     <div class="power-meta"><div class="power-title">🛡️ Matrix Dispersion Shields</div><div class="power-status" id="shields-subtext">Reduces hit damage (-10/unit)</div></div>
+            <!-- Task 2.3: Engineering Thermal Core Venting Minigame Component -->
+            <div id="engineer-thermal-module" style="background: #111827; border: 1px solid #a855f7; padding: 15px; border-radius: 6px; margin-top: 20px; text-align: center;">
+                <div style="font-size: 12px; font-weight: bold; color: #a855f7; margin-bottom: 5px;">🔥 THERMAL REACTOR CORE STATUS</div>
+                <div style="font-size: 24px; font-weight: bold; color: white; margin-bottom: 10px;" id="engineer-thermal-display">0.0°C</div>
+                <div style="font-size: 11px; font-weight: bold; color: #f59e0b; margin-bottom: 6px;" id="eng-cal-label">⚠️ CORE PRESSURE CRITICAL: INTERLOCK BALANCING REQUIRED</div>
+                <div class="slider-track" style="border-color: #a855f7;">
+                    <div id="eng-target" class="target-zone" style="left: 35%; width: 30%; background: #a855f7; box-shadow: 0 0 10px #a855f7;"></div>
+                    <div id="eng-pin" class="slider-pin" style="left: 0%;"></div>
+                </div>
+                <button id="eng-balance-btn" onclick="attemptEngineeringBalance()" class="action-btn" style="background: #a855f7; margin: 0; padding: 8px; font-size: 13px;">⚡ PURGE REACTOR VOLTAGE</button>
+            </div>
                     <div class="power-controls"><button class="power-btn" onclick="adjustPower('shields', -1)">-</button><div class="power-val" id="val-shields">2</div><button class="power-btn" onclick="adjustPower('shields', 1)">+</button></div>
                 </div>
             </div>
