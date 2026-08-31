@@ -35,6 +35,12 @@
         .tactical-canvas { width: 100%; aspect-ratio: 1; background: #070a12; display: block; border-radius: 4px; cursor: crosshair; }
         #captain-canvas { border: 1px solid #f59e0b; }
         #sonar-canvas { border: 1px solid #10b981; }
+
+        /* Timed Calibration Slider UI Elements */
+        .calibration-box { background: #111827; border: 1px solid #dc2626; padding: 12px; border-radius: 6px; margin: 15px 0; text-align: center; }
+        .slider-track { height: 24px; background: #1f293d; position: relative; border-radius: 4px; overflow: hidden; border: 1px solid #4b5563; margin: 10px 0; }
+        .target-zone { position: absolute; top: 0; bottom: 0; background: #059669; box-shadow: 0 0 10px #39ff14; }
+        .slider-pin { width: 6px; position: absolute; top: 0; bottom: 0; background: #ffffff; box-shadow: 0 0 8px #ffffff; transition: left 0.03s linear; }
     </style>
 </head>
 <body>
@@ -111,7 +117,18 @@
                 <span style="font-size: 12px; color: #9ca3af;">BRIDGE TARGET ACQUISITION:</span>
                 <div id="weapons-target-display" style="font-size: 24px; font-weight: bold; color: #f59e0b; text-align: center; margin: 10px 0;">X: 400.0 | Y: 400.0</div>
             </div>
-            <button onclick="fireTorpedo()" class="fire-btn">💥 MATCH PAYLOAD & FIRE</button>
+
+            <!-- Interlocking Calibration Component -->
+            <div id="weapons-calibration-module" class="calibration-box">
+                <div style="font-size: 12px; font-weight: bold; color: #ef4444;" id="cal-status-label">🔋 CAPACITOR DISCHARGED: CALIBRATION REQUIRED</div>
+                <div class="slider-track">
+                    <div id="cal-target" class="target-zone" style="left: 40%; width: 20%;"></div>
+                    <div id="cal-pin" class="slider-pin" style="left: 0%;"></div>
+                </div>
+                <button id="cal-trigger-btn" onclick="attemptCalibration()" class="action-btn" style="margin: 0; padding: 6px; font-size: 12px;">⚡ ENGAGE COUPLING LOCK</button>
+            </div>
+
+            <button id="weapons-fire-btn" onclick="fireTorpedo()" class="fire-btn" style="opacity: 0.4; cursor: not-allowed;" disabled>💥 MATCH PAYLOAD & FIRE</button>
         </div>
 
         <div id="panel-Engineer" class="hidden">
@@ -143,6 +160,14 @@
         
         let sonarPins = []; 
         let activeRadarDistance = null;
+
+        // Calibration minigame variables
+        let currentCalToken = null;
+        let sliderPosition = 0;
+        let sliderDirection = 1;
+        let targetMin = 40;
+        let targetMax = 60;
+        let sliderInterval = null;
 
         function joinGame() {
             const team = document.getElementById('team-select').value;
@@ -195,6 +220,43 @@
                     sonarPins.push({ x, y, type });
                     renderSonarWorkspace();
                 });
+            }
+        }
+
+        function startCalibrationLoop() {
+            if (sliderInterval) clearInterval(sliderInterval);
+            
+            // Randomize sweet spot area locations to defeat static automated bot macros
+            targetMin = Math.floor(Math.random() * 55) + 10;
+            targetMax = targetMin + 20;
+            
+            const targetEl = document.getElementById('cal-target');
+            if (targetEl) {
+                targetEl.style.left = `${targetMin}%`;
+                targetEl.style.width = `${targetMax - targetMin}%`;
+            }
+
+            sliderInterval = setInterval(() => {
+                sliderPosition += sliderDirection * 3.5;
+                if (sliderPosition >= 100) { sliderPosition = 100; sliderDirection = -1; }
+                if (sliderPosition <= 0) { sliderPosition = 0; sliderDirection = 1; }
+                
+                const pinEl = document.getElementById('cal-pin');
+                if (pinEl) pinEl.style.left = `${sliderPosition}%`;
+            }, 30);
+        }
+
+        function attemptCalibration() {
+            if (sliderPosition >= targetMin && sliderPosition <= targetMax) {
+                clearInterval(sliderInterval);
+                document.getElementById('cal-status-label').innerText = "⚡ CALIBRATION SECURED • STANDBY";
+                document.getElementById('cal-status-label').style.color = "#059669";
+                socket.emit('submit_calibration', { token: currentCalToken });
+            } else {
+                // Flash fault indicator and restart tracking loop metrics
+                document.getElementById('cal-status-label').innerText = "❌ FAULT DETECTED: ALIGNMENT RE-INDEXING";
+                document.getElementById('cal-status-label').style.color = "#ef4444";
+                startCalibrationLoop();
             }
         }
 
@@ -315,6 +377,15 @@
         function adjustPower(system, change) { socket.emit('update_power', { system, change: parseInt(change, 10) }); }
         function triggerReset() { if (confirm("Abort mission and reset game?")) socket.emit('reset_game'); }
 
+        socket.on('request_calibration', (data) => {
+            currentCalToken = data.token;
+            if (currentRole === 'Weapons') {
+                document.getElementById('cal-status-label').innerText = "🔋 CAPACITOR DISCHARGED: CALIBRATION REQUIRED";
+                document.getElementById('cal-status-label').style.color = "#ef4444";
+                startCalibrationLoop();
+            }
+        });
+
         socket.on('state_update', (data) => {
             if(!data.active || !currentRole) return;
             document.getElementById('display-hp').innerText = `${data.teamState.hp}%`;
@@ -355,6 +426,21 @@
                     const alertBanner = document.getElementById('weapons-power-alert');
                     if (power.weapons < 2) alertBanner.classList.remove('hidden');
                     else alertBanner.classList.add('hidden');
+                    
+                    // Render fire switch status dependent on server-verified calibration state markers
+                    const fireBtn = document.getElementById('weapons-fire-btn');
+                    if (data.teamState.calibrated && power.weapons >= 2) {
+                        fireBtn.removeAttribute('disabled');
+                        fireBtn.style.opacity = "1.0";
+                        fireBtn.style.cursor = "pointer";
+                        document.getElementById('cal-status-label').innerText = "🎯 LOCK ENGAGED: CAPACITOR FULLY CHARGED";
+                        document.getElementById('cal-status-label').style.color = "#39ff14";
+                        if (sliderInterval) { clearInterval(sliderInterval); sliderInterval = null; }
+                    } else {
+                        fireBtn.setAttribute('disabled', 'true');
+                        fireBtn.style.opacity = "0.4";
+                        fireBtn.style.cursor = "not-allowed";
+                    }
                 }
             }
 
@@ -398,6 +484,7 @@
             currentRole = '';
             sonarPins = [];
             activeRadarDistance = null;
+            if (sliderInterval) clearInterval(sliderInterval);
             
             document.getElementById('game-screen').classList.add('hidden');
             document.getElementById('setup-screen').classList.remove('hidden');

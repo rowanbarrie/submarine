@@ -13,28 +13,24 @@
 | **Phase 2** | Vector Mechanics & Smooth Kinematics | **Done** | Implemented 30Hz physics tick-rate logic loop and mapped smooth client-side steering keys. |
 | **Phase 3** | Spatial Telemetry & Collisions | **Done** | Deployed Euclidean calculation matrices, circle weapon hitboxes, and boundary network filters. |
 | **Phase 4** | Frontend UI Rendering (HTML5 Canvas) | **Done** | Upgraded Captain & Sonar panels to high-performance HTML5 2D `<canvas>` spaces. |
-| **Phase 5** | Interlocking Station Minigames | **PENDING** | Integrate server-verified slider and timing loops into the Weapons and Engineering stations. |
+| **Phase 5** | Interlocking Station Minigames | **In Progress** | Integrate server-verified slider and timing loops into the Weapons and Engineering stations. |
 
 ---
 
-## 🏗️ Phase 4: Frontend UI Rendering (HTML5 Canvas) — COMPLETED
-**Objective:** Upgrade the Captain's tracking grid and the Sonar operator's map matrix to standard HTML5 `<canvas>` rendering spaces. This preserves our strict 4KB weight budget by avoiding complex DOM trees, while mapping continuous float coordinates beautifully.
+## 🏗️ Phase 5: Interlocking Station Minigames — IN PROGRESS
 
-### 1. Step 1: Captain Canvas Rendering Bridge — Completed
-* **Target Elements:** Replaced legacy, DOM-heavy `.helm-matrix` container on the Captain's panel with a single lightweight 2D `<canvas>` element (`id="captain-canvas"`).
-* **Dimensional Scales:** Matches canvas context dimensions exactly to server physics boundaries (`800x800`), scaling responsively via CSS to fit mobile layouts.
-* **Vector Drawing Pipe:** Implemented real-time rendering script to redraw a blue vector pointer triangle reflecting `data.teamState.pos` and `data.teamState.heading` angle vectors, along with a red intersecting fire-control crosshair ring.
-* **Input Intercept Remap:** Remapped canvas `'click'` tracking to extract relative coordinates via `offsetX` and `offsetY`, auto-scaling to absolute 800x800 spaces to emit exact `set_target` payloads.
+### 1. Step 1: Weapons Charge / Reload Calibration Minigame — Completed
+* **Target Elements:** Embedded a rhythmic indicator rail widget inside the `#panel-Weapons` workspace.
+* **Cryptographic Verification**: Added a token-generation mechanism (`expectedToken`) tied to target changes. Firing calls are strictly blocked unless a valid, server-issued security hash matches the confirmation vector.
+* **State Interlock Enforcement**: Shifting targeted vectors dumps capacitor loads, resetting verification states to ensure active mechanical reloads are simulated during combat adjustments.
 
-### 2. Step 2: Sonar Passive Tactical Display — Completed
-* **Target Elements:** Swapped out the legacy `.sonar-matrix` block on the Sonar Operator screen with an adaptive tactical radar `<canvas>` canvas (`id="sonar-canvas"`).
-* **Proximity Wave Ring Map:** Replaced old blocky tile-loop highlights with geometric radar wave arcs. Intercepts raw Euclidean float distances via regex tracking and plots concentric vector circles outward around your submarine's center location.
-* **Manual Contact Tracking:** Integrated mouse and touch tracking arrays. Allows operators to drop persistent coordinate markers (Green = suspected tracking vectors, Red = weapon splash points) with manual data purging capabilities.
+### 2. Step 2: Engineering Auxiliary Resource Routing — Pending
+* **Target Elements:** Design a sequence matching or voltage balance grid game within the `#panel-Engineer` sub-panel layout.
+* **Mechanic Goal**: Successful engineering balancing outputs will feed directly into hull patching checks, or let engineers venting excess friction safely execute low-noise silent running modes.
 
 ---
 
 ## 🎯 Next Engineering Work Orders
 When a new AI or developer session initializes, they should pick up tasks directly matching the backlog order below:
-1. **Implement Phase 5, Step 1: Weapons Charge / Reload Calibration Minigame** inside the `#panel-Weapons` workspace.
-2. **Deploy Server-Side Payload Validation Markers** to ensure fire mechanics reject injection payloads from the developer console.
-
+1. **Implement Phase 5, Step 2: Engineering Auxiliary Power Routing Minigame** inside the `#panel-Engineer` workspace.
+2. **Deploy Multi-Match Lobby Allocations** to allow individual groups to spawn custom room IDs without conflicting positions.

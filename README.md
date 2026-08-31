@@ -22,7 +22,7 @@
 
 ### 3. 💥 Weapons Officer (Torpedo Engagement)
 * **Interface:** Payload activation panel receiving real-time crosshair coordinate locks directly from the Captain's bridge display.
-* **Duties:** Confirms structural targeting telemetry, primes ordnance payloads, and fires torpedo strikes.
+* **Duties:** Confirms structural targeting telemetry, completes the server-verified capacitor calibration minigame to lock firing solutions, and executes torpedo launches.
 
 ### 4. 🛠️ Chief Engineer (System Repairs & Power Management)
 * **Interface:** Structural maintenance bay panel.
@@ -46,9 +46,8 @@
 
 ## 🗺️ Next Generation Feature Backlog
 
-1. **Sonar Visual Graph Map:** Give Sonar technicians a clear map grid layout where clicking sectors drops visual tracking pins to trace suspected paths manually based on distance logs.
-2. **Weapons Charge / Reload Calibration:** Integrate timed slider games or sequence button matching tasks before Torpedo Officers can engage the firing mechanisms.
-3. **Engineering Resource Routing:** Active control valves for engineers to run hull welding checks or dump engine heat signatures to initiate silent stealth runs.
+1. **Engineering Resource Routing:** Active control valves for engineers to run hull welding checks or dump engine heat signatures to initiate silent stealth runs.
+2. **Multi-Match Lobby Allocations:** Implement dynamic room IDs so multiple separate game pairings can deploy over a single server node.
 
 ## 🚀 Production Deployment via PM2
 
@@ -78,4 +77,3 @@ npx repomix
 ```
 
 *Excluded by default via `.gitignore`: `node_modules/`, `npm-debug.log`, and `repomix-output.xml`.*
-
