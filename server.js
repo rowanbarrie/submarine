@@ -141,6 +141,24 @@ io.on('connection', (socket) => {
         io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
     });
 
+    // CHIEF ENGINEER: Task 2.2 Balance Thermal Load Event Handler
+    socket.on('submit_engineering_balance', ({ success }) => {
+        if (!gameState.active || socket.role !== 'Engineer') return;
+        const team = socket.team;
+        if (success === true) {
+            const currentHeat = gameState.teams[team].thermalLoad || 0.0;
+            gameState.teams[team].thermalLoad = Math.max(0.0, currentHeat * 0.6);
+            socket.emit('sonar_ping', { message: "🛠️ REACTOR VENTED: Core auxiliary voltages balanced. Thermal load purged." });
+            io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
+        } else {
+            socket.emit('sonar_ping', { message: "⚠️ ENGINEERING FAULT: Auxiliary balance vector rejected." });
+        }
+    });
+    //
+
+        io.to(team).emit('state_update', { teamState: gameState.teams[team], active: gameState.active });
+    });
+
     // CAPTAIN: Process continuous steering inputs (Throttled vectors)
     socket.on('steer_sub', ({ heading, speed }) => {
         if (!gameState.active || socket.role !== 'Captain') return;
