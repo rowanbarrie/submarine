@@ -47,8 +47,14 @@
 
 ## 🔮 Next Generation Feature Backlog
 
-1. **Phase 5, Step 2: Engineering Auxiliary Power Routing Minigame:** Implement an interactive grid balancing mini-game inside the Engineer panel to handle hull weld integrity and silent stealth thermal discharges.
-2. **Multi-Match Lobby Allocations:** Restructure internal room routing arrays to accept custom party ID codes, allowing multiple separate games to run simultaneously on a single droplet.
+### Phase 5, Step 2: Engineering Auxiliary Power Routing Minigame Breakdown
+* [ ] **Task 2.1 (Backend State):** Add `thermalLoad` floats to team state schemas in `server.js` and implement a 30Hz decay/spike loop.
+* [ ] **Task 2.2 (Backend Events):** Create the `submit_engineering_balance` socket event listener to handle and verify engineering mini-game success tokens.
+* [ ] **Task 2.3 (Frontend UI):** Inject the compact interactive layout framework into `#panel-Engineer` inside `public/index.html`.
+* [ ] **Task 2.4 (Frontend Logic):** Write the client-side canvas/gauge animation frame loops and hook up network emission hooks to complete the sub-system.
+
+### Future Expansion
+* [ ] **Multi-Match Lobby Allocations:** Restructure internal room routing arrays to accept custom party ID codes, allowing multiple separate games to run simultaneously on a single droplet.
 
 ---
 
